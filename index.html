@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Monitoring & Handover Logistik (Live Data)</title>
+    
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .animate-fade-in { animation: fadeIn 0.2s ease-out; }
+        .animate-slide-in { animation: slideIn 0.3s ease-out; }
+
+        /* Print Styles */
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background-color: white; }
+            .print-area { padding: 20px; border: none; }
+        }
+        .print-only { display: none; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- Script Utama dengan Type Module agar bisa import Firebase -->
+    <script type="text/babel" data-type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, updateDoc, setDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, where, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        const { useState, useEffect, useRef } = React;
+
+        // --- KONFIGURASI FIREBASE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZFpX5OxSVIG7f58U60dVJHufHORFQuIg",
+            authDomain: "hub-dashboard-92428.firebaseapp.com",
+            projectId: "hub-dashboard-92428",
+            storageBucket: "hub-dashboard-92428.firebasestorage.app",
+            messagingSenderId: "827243064075",
+            appId: "1:827243064075:web:ac948902fdbd6c9333d00e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // --- ICONS ---
+        const Icon = ({ name, size = 18, className }) => {
+            const icons = {
+                Box: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>,
+                Users: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
+                LogOut: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>,
+                Printer: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>,
+                Settings: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
+                Trash: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>,
+                Edit: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>,
+                X: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
+                Plus: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>,
+                AlertTriangle: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>,
+                Scan: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="10" height="10"></rect></svg>,
+                History: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>,
+                Eye: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>,
+                Lock: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            };
+            return icons[name] || null;
+        };
+
+        const Toast = ({ message, type, onClose }) => {
+            useEffect(() => {
+                const timer = setTimeout(onClose, 3000); 
+                return () => clearTimeout(timer);
+            }, [onClose]);
+
+            const bgClass = type === 'success' ? 'bg-green-600' : 'bg-red-600';
+            const icon = type === 'success' ? '✓' : '✕';
+
+            return (
+                <div className={`fixed top-5 right-5 ${bgClass} text-white px-6 py-4 rounded-lg shadow-xl z-[100] flex items-center space-x-3 animate-slide-in min-w-[300px]`}>
+                    <span className="font-bold text-lg">{icon}</span>
+                    <span className="font-medium">{message}</span>
+                </div>
+            );
+        };
+
+        const Modal = ({ title, children, onClose, maxWidth = "max-w-md" }) => (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in backdrop-blur-sm p-4">
+                <div className={`bg-white rounded-xl p-6 w-full ${maxWidth} shadow-2xl relative transform transition-all scale-100 max-h-[90vh] overflow-y-auto`}>
+                    <div className="flex justify-between items-center mb-6 border-b pb-4 sticky top-0 bg-white z-10">
+                        <h3 className="text-xl font-bold text-gray-800">{title}</h3>
+                        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition p-1 hover:bg-gray-100 rounded-full">
+                            <Icon name="X" size={24}/>
+                        </button>
+                    </div>
+                    {children}
+                </div>
+            </div>
+        );
+
+        const ConfirmDialog = ({ message, onConfirm, onCancel, confirmText = "Ya, Lanjutkan", cancelText = "Batal", isProcessing }) => (
+            <Modal title="Konfirmasi" onClose={onCancel}>
+                <div className="text-center py-4">
+                    <div className="bg-blue-100 p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                        <Icon name="AlertTriangle" size={32} className="text-blue-600"/>
+                    </div>
+                    <p className="text-gray-600 text-lg mb-8">{message}</p>
+                    <div className="flex justify-center space-x-3">
+                        <button onClick={onCancel} className="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition">
+                            {cancelText}
+                        </button>
+                        <button onClick={onConfirm} className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg transition flex items-center">
+                            {isProcessing ? 'Memproses...' : confirmText}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+        );
+
+        const SecurityCheckModal = ({ onClose, onConfirm, isProcessing }) => {
+            const [code, setCode] = useState('');
+            
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                onConfirm(code);
+            };
+
+            return (
+                <Modal title="Otorisasi Keamanan" onClose={onClose} maxWidth="max-w-sm">
+                    <form onSubmit={handleSubmit} className="text-center">
+                        <div className="bg-red-100 p-3 rounded-full w-14 h-14 flex items-center justify-center mx-auto mb-4">
+                            <Icon name="Lock" size={28} className="text-red-600"/>
+                        </div>
+                        <p className="text-gray-600 mb-4 text-sm">Tindakan ini memerlukan kode otorisasi dari Admin.</p>
+                        <input 
+                            type="password" 
+                            value={code} 
+                            onChange={(e) => setCode(e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg p-3 text-center text-lg font-bold tracking-widest mb-6 focus:ring-red-500 focus:border-red-500"
+                            placeholder="Kode Otorisasi"
+                            autoFocus
+                        />
+                        <div className="flex justify-end gap-2">
+                            <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-100 rounded-lg">Batal</button>
+                            <button type="submit" disabled={isProcessing} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold">
+                                {isProcessing ? 'Memverifikasi...' : 'Verifikasi & Hapus'}
+                            </button>
+                        </div>
+                    </form>
+                </Modal>
+            );
+        };
+
+        const getStatusBadge = (status) => {
+            switch(status) {
+                case 'Pending HD': return <span className="px-3 py-1 text-xs font-bold rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">Di HD (Investigasi)</span>;
+                case 'Returned': return <span className="px-3 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800 border border-green-200">Dikembalikan ke HUB</span>;
+                case 'Tanpa AWB': return <span className="px-3 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800 border border-red-200">Tanpa AWB</span>;
+                default: return <span className="px-3 py-1 text-xs font-bold rounded-full bg-gray-100 text-gray-600">{status}</span>;
+            }
+        };
+
+        // --- COMPONENTS DEFINITIONS ---
+
+        const LoginScreen = ({ onLogin, users, isLoading, showToast }) => {
+            const [nik, setNik] = useState('');
+            const [password, setPassword] = useState('');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                const user = users.find(u => u.nik === nik && u.password === password);
+                if (user) {
+                    onLogin(user);
+                    showToast(`Selamat datang, ${user.nama}!`, 'success');
+                } else {
+                    showToast("NIK atau Password salah!", 'error');
+                }
+            };
+
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">
+                    <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md animate-slide-in">
+                        <div className="text-center mb-8">
+                            <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Logistic Portal</h1>
+                            <div className="flex justify-center items-center mt-3 space-x-2">
+                                <span className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></span>
+                                <p className="text-gray-500 text-sm">Database System Online</p>
+                            </div>
+                        </div>
+                        {isLoading ? (
+                            <div className="text-center py-10">
+                                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                                <p className="text-gray-500">Menghubungkan ke Server...</p>
+                            </div>
+                        ) : (
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">NIK / ID User</label>
+                                    <input type="text" value={nik} onChange={(e) => setNik(e.target.value)} className="w-full rounded-lg border-gray-300 shadow-sm p-3 border focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition" placeholder="Masukkan NIK" required />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+                                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-lg border-gray-300 shadow-sm p-3 border focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition" placeholder="Masukkan Password" required />
+                                </div>
+                                <button type="submit" className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 font-bold transition-transform transform active:scale-95">
+                                    Masuk Portal
+                                </button>
+                            </form>
+                        )}
+                        <div className="mt-8 text-center text-xs text-gray-400 border-t pt-4">
+                            <p>Default Admin: NIK: <strong>admin</strong> | Pass: <strong>admin</strong></p>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const AdminPanel = ({ users, showToast }) => {
+            const [isFormOpen, setIsFormOpen] = useState(false);
+            const [formData, setFormData] = useState({ id: null, nama: '', nik: '', password: '', role: 'user' });
+            const [deleteModal, setDeleteModal] = useState({ open: false, userId: null });
+            const [isProcessing, setIsProcessing] = useState(false);
+            const [securityCode, setSecurityCode] = useState('');
+
+            useEffect(() => {
+                const fetchSettings = async () => {
+                    const docRef = doc(db, "settings", "config");
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        setSecurityCode(docSnap.data().deleteCode || '123456');
+                    } else {
+                        // Create default if not exists
+                        await setDoc(docRef, { deleteCode: '123456' });
+                        setSecurityCode('123456');
+                    }
+                };
+                fetchSettings();
+            }, []);
+
+            const saveSettings = async (e) => {
+                e.preventDefault();
+                try {
+                    await setDoc(doc(db, "settings", "config"), { deleteCode: securityCode }, { merge: true });
+                    showToast("Kode keamanan berhasil diperbarui!", "success");
+                } catch (err) {
+                    showToast("Gagal menyimpan kode: " + err.message, "error");
+                }
+            };
+
+            const openAddModal = () => {
+                setFormData({ id: null, nama: '', nik: '', password: '', role: 'user' });
+                setIsFormOpen(true);
+            };
+
+            const openEditModal = (user) => {
+                setFormData(user);
+                setIsFormOpen(true);
+            };
+
+            const handleSave = async (e) => {
+                e.preventDefault();
+                setIsProcessing(true);
+                try {
+                    if (formData.id) {
+                        const userRef = doc(db, 'users', formData.id);
+                        await updateDoc(userRef, {
+                            nama: formData.nama,
+                            nik: formData.nik,
+                            password: formData.password,
+                            role: formData.role
+                        });
+                        showToast("User berhasil diperbarui!", 'success');
+                    } else {
+                        await addDoc(collection(db, 'users'), {
+                            nama: formData.nama,
+                            nik: formData.nik,
+                            password: formData.password,
+                            role: formData.role,
+                            createdAt: serverTimestamp()
+                        });
+                        showToast("User baru berhasil ditambahkan!", 'success');
+                    }
+                    setIsFormOpen(false);
+                } catch (err) {
+                    showToast("Gagal menyimpan: " + err.message, 'error');
+                } finally {
+                    setIsProcessing(false);
+                }
+            };
+
+            const handleDelete = async () => {
+                if (!deleteModal.userId) return;
+                setIsProcessing(true);
+                try {
+                    await deleteDoc(doc(db, 'users', deleteModal.userId));
+                    showToast("User berhasil dihapus.", 'success');
+                    setDeleteModal({ open: false, userId: null });
+                } catch (err) {
+                    showToast("Gagal menghapus: " + err.message, 'error');
+                } finally {
+                    setIsProcessing(false);
+                }
+            };
+
+            return (
+                <div className="space-y-6">
+                    {/* Settings Section */}
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-800">Pengaturan Keamanan</h2>
+                            <p className="text-gray-500 text-sm">Kode otorisasi untuk menghapus data (HUB/HD)</p>
+                        </div>
+                        <form onSubmit={saveSettings} className="flex gap-2 items-center">
+                            <input 
+                                type="text" 
+                                value={securityCode} 
+                                onChange={(e) => setSecurityCode(e.target.value)}
+                                className="border border-gray-300 rounded-lg p-2 font-mono text-center font-bold w-32"
+                                placeholder="Kode"
+                            />
+                            <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-700">Simpan Kode</button>
+                        </form>
+                    </div>
+
+                    <div className="flex justify-between items-center bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-800">Manajemen Pengguna</h2>
+                            <p className="text-gray-500 text-sm">Kelola akses dan akun pengguna sistem</p>
+                        </div>
+                        <button onClick={openAddModal} className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow">
+                            <Icon name="Plus" size={18} className="mr-2"/> Tambah User
+                        </button>
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-bold">
+                                <tr>
+                                    <th className="px-6 py-4">Nama</th>
+                                    <th className="px-6 py-4">NIK</th>
+                                    <th className="px-6 py-4">Password</th>
+                                    <th className="px-6 py-4">Role</th>
+                                    <th className="px-6 py-4 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {users.map(u => (
+                                    <tr key={u.id} className="hover:bg-blue-50 transition-colors">
+                                        <td className="px-6 py-4 font-semibold text-gray-700">{u.nama}</td>
+                                        <td className="px-6 py-4 text-gray-600">{u.nik}</td>
+                                        <td className="px-6 py-4 font-mono text-gray-400">••••••</td>
+                                        <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-xs font-bold uppercase ${u.role === 'admin' ? 'bg-purple-100 text-purple-800' : u.role === 'hub' ? 'bg-blue-100 text-blue-800' : u.role === 'hd' ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800'}`}>{u.role}</span></td>
+                                        <td className="px-6 py-4 text-center flex justify-center space-x-3">
+                                            <button onClick={() => openEditModal(u)} className="text-blue-500 hover:text-blue-700 p-1 hover:bg-blue-100 rounded transition"><Icon name="Edit" size={18}/></button>
+                                            <button onClick={() => setDeleteModal({ open: true, userId: u.id })} className="text-red-500 hover:text-red-700 p-1 hover:bg-red-100 rounded transition"><Icon name="Trash" size={18}/></button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {isFormOpen && (
+                        <Modal title={formData.id ? "Edit User" : "Tambah User Baru"} onClose={() => setIsFormOpen(false)}>
+                            <form onSubmit={handleSave} className="space-y-4">
+                                <div><label className="block text-sm font-medium">Nama Lengkap</label><input type="text" required value={formData.nama} onChange={e => setFormData({...formData, nama: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500" /></div>
+                                <div><label className="block text-sm font-medium">NIK</label><input type="text" required value={formData.nik} onChange={e => setFormData({...formData, nik: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500" /></div>
+                                <div><label className="block text-sm font-medium">Password</label><input type="text" required value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500" /></div>
+                                <div>
+                                    <label className="block text-sm font-medium">Role</label>
+                                    <select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-lg p-2.5 bg-white">
+                                        <option value="user">User</option><option value="hub">Tim HUB</option><option value="hd">Tim HD</option><option value="admin">Administrator</option>
+                                    </select>
+                                </div>
+                                <div className="flex justify-end space-x-3 mt-6 pt-4 border-t">
+                                    <button type="button" onClick={() => setIsFormOpen(false)} className="px-4 py-2 bg-gray-100 rounded-lg">Batal</button>
+                                    <button type="submit" disabled={isProcessing} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{isProcessing ? 'Menyimpan...' : 'Simpan'}</button>
+                                </div>
+                            </form>
+                        </Modal>
+                    )}
+
+                    {deleteModal.open && (
+                        <ConfirmDialog 
+                            message="Apakah Anda yakin ingin menghapus user ini?"
+                            onConfirm={handleDelete}
+                            onCancel={() => setDeleteModal({open: false, userId: null})}
+                            isProcessing={isProcessing}
+                            confirmText="Ya, Hapus"
+                            cancelText="Batal"
+                        />
+                    )}
+                </div>
+            );
+        };
+
+        const DashboardView = ({ data }) => {
+            const stats = {
+                total: data.length,
+                pending: data.filter(i => i.status === 'Pending HD').length,
+                returned: data.filter(i => i.status === 'Returned').length,
+                noAwb: data.filter(i => !i.awb).length
+            };
+            return (
+                <div className="space-y-6 animate-fade-in">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-500 hover:shadow-md transition"><p className="text-gray-500 text-xs uppercase font-bold tracking-wider">Total Paket</p><p className="text-3xl font-extrabold text-gray-800 mt-1">{stats.total}</p></div>
+                        <div className="bg-white p-5 rounded-xl shadow-sm border-l-4 border-yellow-500 hover:shadow-md transition"><p className="text-gray-500 text-xs uppercase font-bold tracking-wider">Sedang Di HD</p><p className="text-3xl font-extrabold text-gray-800 mt-1">{stats.pending}</p></div>
+                        <div className="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-500 hover:shadow-md transition"><p className="text-gray-500 text-xs uppercase font-bold tracking-wider">Selesai / Kembali</p><p className="text-3xl font-extrabold text-gray-800 mt-1">{stats.returned}</p></div>
+                        <div className="bg-white p-5 rounded-xl shadow-sm border-l-4 border-red-500 hover:shadow-md transition"><p className="text-gray-500 text-xs uppercase font-bold tracking-wider">Tanpa AWB</p><p className="text-3xl font-extrabold text-gray-800 mt-1">{stats.noAwb}</p></div>
+                    </div>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                            <h3 className="font-bold text-gray-800 text-lg">Tracking Logistik Real-time</h3>
+                            <span className="flex items-center text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-bold"><span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span> Live Sync</span>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-white text-gray-500 uppercase border-b border-gray-100 text-xs">
+                                    <tr><th className="px-6 py-4">Tanggal</th><th className="px-6 py-4">AWB / Resi</th><th className="px-6 py-4">Status Paket</th><th className="px-6 py-4">Origin</th><th className="px-6 py-4">Posisi</th><th className="px-6 py-4">Note HD</th></tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {data.map(item => (
+                                        <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                                            <td className="px-6 py-4 font-medium text-gray-900">{item.date}</td>
+                                            <td className="px-6 py-4 font-mono">{item.awb || <span className="text-red-500 italic text-xs bg-red-50 px-2 py-1 rounded">No AWB</span>}</td>
+                                            <td className="px-6 py-4"><span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs border border-blue-100">{item.packageStatus || 'N/A'}</span></td>
+                                            <td className="px-6 py-4">{item.origin}</td>
+                                            <td className="px-6 py-4">{getStatusBadge(item.status)}</td>
+                                            <td className="px-6 py-4 text-gray-500">{item.hdNote}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const HubView = ({ data, showToast, onPrint, currentUser }) => {
+            const [viewMode, setViewMode] = useState('input'); // 'input' or 'history'
+            const [manifests, setManifests] = useState([]);
+            const [draftItems, setDraftItems] = useState([]);
+            
+            // Session & Form
+            const [sessionSettings, setSessionSettings] = useState({
+                date: new Date().toISOString().split('T')[0],
+                origin: 'MKS'
+            });
+            const [form, setForm] = useState({ awb: '', status: 'Repacking', description: '' });
+
+            // Modals & Logic States
+            const [editDraft, setEditDraft] = useState(null);
+            const [showPrintConfirm, setShowPrintConfirm] = useState(false);
+            const [lastSavedBatch, setLastSavedBatch] = useState([]);
+            const [detailManifest, setDetailManifest] = useState(null); // Untuk modal detail history
+            
+            // Security Delete State
+            const [securityModal, setSecurityModal] = useState({ show: false, itemType: null, itemId: null }); // itemType: 'manifest' or 'package'
+            const [deleteCode, setDeleteCode] = useState('123456'); // Default before fetch
+
+            const statusOptions = ['Repacking', 'Tolakan bandara', 'Return', 'Tanpa AWB', 'Demage', 'cancel order', 'Freeze', 'CrossLabel'];
+            const originOptions = ['MKS', 'BPP', 'BJM', 'MND'];
+
+            // Fetch Manifest History & Delete Code
+            useEffect(() => {
+                // Fetch Manifests
+                const q = query(collection(db, "manifests"), orderBy("createdAt", "desc"));
+                const unsub = onSnapshot(q, (snap) => {
+                    const list = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                    setManifests(list);
+                });
+
+                // Fetch Config Code
+                const fetchConfig = async () => {
+                    const docRef = doc(db, "settings", "config");
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) setDeleteCode(docSnap.data().deleteCode || '123456');
+                };
+                fetchConfig();
+
+                return unsub;
+            }, []);
+
+            // VALIDASI DUPLIKAT
+            const checkDuplicate = (awbToCheck) => {
+                if (!awbToCheck) return false;
+                const inDraft = draftItems.some(item => item.awb === awbToCheck);
+                if (inDraft) return "AWB sudah ada di list Draft!";
+                const inDb = data.some(item => item.awb === awbToCheck && item.date === sessionSettings.date);
+                if (inDb) return "AWB sudah pernah diinput pada tanggal ini!";
+                return null;
+            };
+
+            const handleAddToDraft = (e) => {
+                e.preventDefault();
+                if (!form.awb && form.status !== 'Tanpa AWB') return showToast("No Resi Wajib diisi (kecuali status Tanpa AWB)", 'error');
+                if (form.status === 'Tanpa AWB' && !form.description) return showToast("Ciri-Ciri Paket wajib diisi jika Tanpa AWB", 'error');
+
+                if (form.status !== 'Tanpa AWB') {
+                    const duplicateMsg = checkDuplicate(form.awb);
+                    if (duplicateMsg) {
+                        showToast(duplicateMsg, 'error');
+                        setForm(prev => ({ ...prev, awb: '' }));
+                        return;
+                    }
+                }
+
+                const newItem = {
+                    ...form,
+                    date: sessionSettings.date,
+                    origin: sessionSettings.origin,
+                    id: Date.now(), 
+                    displayStatus: form.status
+                };
+
+                setDraftItems([newItem, ...draftItems]);
+                setForm({ ...form, awb: '', description: '' });
+            };
+
+            const handleSaveManifest = async () => {
+                if (draftItems.length === 0) return;
+                
+                try {
+                    const manifestId = `MAN-${Date.now()}`;
+                    
+                    // Simpan Header Manifest
+                    await addDoc(collection(db, "manifests"), {
+                        manifestId,
+                        date: sessionSettings.date,
+                        origin: sessionSettings.origin,
+                        totalItems: draftItems.length,
+                        createdAt: serverTimestamp()
+                    });
+
+                    // Simpan Paket
+                    const savedItems = [];
+                    for (const item of draftItems) {
+                        const docRef = await addDoc(collection(db, "packages"), {
+                            ...item,
+                            manifestId, 
+                            packageStatus: item.status,
+                            status: 'Pending HD',
+                            hdNote: '',
+                            returnDate: '',
+                            type: item.awb ? 'AWB' : 'Non-AWB',
+                            createdAt: serverTimestamp()
+                        });
+                        savedItems.push({ ...item, id: docRef.id, manifestId });
+                    }
+                    
+                    setLastSavedBatch(savedItems);
+                    setDraftItems([]);
+                    setShowPrintConfirm(true);
+                    showToast("Manifest Berhasil Disimpan & Dicatat!", 'success');
+                } catch (err) {
+                    showToast("Gagal menyimpan: " + err.message, 'error');
+                }
+            };
+
+            const handleConfirmPrint = () => {
+                setShowPrintConfirm(false);
+                onPrint(lastSavedBatch, 'OUT');
+            };
+
+            const handleReprintHistory = (manifest) => {
+                const itemsToPrint = data.filter(p => p.manifestId === manifest.manifestId);
+                if (itemsToPrint.length === 0) return showToast("Data paket tidak ditemukan (mungkin sudah dihapus)", "error");
+                onPrint(itemsToPrint, 'OUT');
+            };
+
+            // --- DELETE LOGIC ---
+            
+            // 1. Triggered when clicking "Delete" button
+            const initiateDelete = (type, id) => {
+                if (currentUser.role === 'admin') {
+                    // Admin bypass
+                    if (confirm("Admin: Yakin ingin menghapus data ini?")) {
+                        performDelete(type, id);
+                    }
+                } else {
+                    // Show security modal for HUB/HD
+                    setSecurityModal({ show: true, itemType: type, itemId: id });
+                }
+            };
+
+            // 2. Validate Code & Execute
+            const handleSecurityConfirm = (inputCode) => {
+                if (inputCode === deleteCode) {
+                    performDelete(securityModal.itemType, securityModal.itemId);
+                    setSecurityModal({ show: false, itemType: null, itemId: null });
+                } else {
+                    alert("Kode Otorisasi Salah!");
+                }
+            };
+
+            // 3. Actual DB Delete
+            const performDelete = async (type, id) => {
+                try {
+                    if (type === 'manifest') {
+                        // Delete Manifest Doc
+                        await deleteDoc(doc(db, "manifests", id));
+                        // Optional: Delete Linked Packages to clean up DB
+                        // Find manifestId to delete packages (we need the object, assume id passed is docId)
+                        // This part is tricky without fetching first, but for now we assume just deleting the history record is key
+                        // Or we can query packages with this manifestId and delete them.
+                        const manifest = manifests.find(m => m.id === id);
+                        if(manifest) {
+                            // Find all packages with this manifestId and delete them
+                            const itemsToDelete = data.filter(p => p.manifestId === manifest.manifestId);
+                            itemsToDelete.forEach(async (p) => {
+                                await deleteDoc(doc(db, "packages", p.id));
+                            });
+                        }
+                        showToast("Surat Jalan & Paket didalamnya berhasil dihapus.", "success");
+                    } else if (type === 'package') {
+                        await deleteDoc(doc(db, "packages", id));
+                        showToast("Paket berhasil dihapus.", "success");
+                    }
+                } catch (err) {
+                    showToast("Gagal menghapus: " + err.message, "error");
+                }
+            };
+
+            // Edit Draft
+            const openEditDraftModal = (idx) => setEditDraft({ index: idx, data: { ...draftItems[idx] } });
+            const saveEditDraft = () => {
+                const newItems = [...draftItems];
+                newItems[editDraft.index] = editDraft.data;
+                setDraftItems(newItems);
+                setEditDraft(null);
+                showToast("Draft berhasil diperbarui", 'success');
+            };
+
+            // Open Detail Manifest
+            const openDetailManifest = (manifest) => {
+                const items = data.filter(p => p.manifestId === manifest.manifestId);
+                setDetailManifest({ ...manifest, items });
+            };
+
+            return (
+                <div className="space-y-6 animate-fade-in">
+                    
+                    {/* Header & Toggle View */}
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div className="flex space-x-2 bg-gray-100 p-1 rounded-lg">
+                            <button 
+                                onClick={() => setViewMode('input')}
+                                className={`px-4 py-2 text-sm font-bold rounded-md transition ${viewMode === 'input' ? 'bg-white text-blue-600 shadow' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                <Icon name="Box" className="inline mr-2" size={16}/> Input Baru
+                            </button>
+                            <button 
+                                onClick={() => setViewMode('history')}
+                                className={`px-4 py-2 text-sm font-bold rounded-md transition ${viewMode === 'history' ? 'bg-white text-blue-600 shadow' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                <Icon name="History" className="inline mr-2" size={16}/> Riwayat Manifest
+                            </button>
+                        </div>
+
+                        {viewMode === 'input' && (
+                            <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+                                <div className="flex items-center bg-gray-50 p-2 rounded-lg border border-gray-200">
+                                    <span className="text-xs text-gray-500 mr-2 font-bold uppercase">Tanggal:</span>
+                                    <input type="date" value={sessionSettings.date} onChange={e => setSessionSettings({...sessionSettings, date: e.target.value})} className="bg-transparent text-sm font-bold text-gray-800 outline-none" />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {originOptions.map(org => (
+                                        <button key={org} onClick={() => setSessionSettings({...sessionSettings, origin: org})} className={`px-3 py-1.5 text-xs font-bold rounded-md transition ${sessionSettings.origin === org ? 'bg-blue-600 text-white shadow-md' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-100'}`}>{org}</button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* MODE 1: INPUT BARU */}
+                    {viewMode === 'input' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* Input Form */}
+                            <div className="lg:col-span-1">
+                                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 sticky top-24">
+                                    <h3 className="text-lg font-bold mb-6 text-blue-800 flex items-center border-b pb-4">
+                                        <Icon name="Box" className="mr-2"/> Scan Paket
+                                    </h3>
+                                    <form onSubmit={handleAddToDraft} className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-1">Status Paket</label>
+                                            <select value={form.status} onChange={e => setForm({...form, status: e.target.value})} className="w-full border border-gray-300 rounded-lg p-3 bg-white focus:ring-blue-500">
+                                                {statusOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-1">No Resi / Scan Barcode</label>
+                                            <div className="relative">
+                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400"><Icon name="Scan" size={18}/></div>
+                                                <input type="text" value={form.awb} onChange={e => setForm({...form, awb: e.target.value})} className="w-full pl-10 border border-gray-300 rounded-lg p-3 focus:ring-blue-500 font-mono text-lg font-bold text-gray-800" placeholder="Scan disini..." autoFocus />
+                                            </div>
+                                        </div>
+                                        {form.status === 'Tanpa AWB' && (
+                                            <div className="animate-slide-in">
+                                                <label className="block text-sm font-semibold text-red-600 mb-1">Ciri-Ciri Paket (Wajib)</label>
+                                                <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="w-full border border-red-300 bg-red-50 rounded-lg p-3 focus:ring-red-500" rows="3" placeholder="Warna, Ukuran, Bentuk..."></textarea>
+                                            </div>
+                                        )}
+                                        <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition shadow-lg flex justify-center items-center mt-2">
+                                            <Icon name="Plus" size={18} className="mr-2"/> Tambah ke Draft
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            {/* Draft Table */}
+                            <div className="lg:col-span-2">
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 min-h-[500px] flex flex-col">
+                                    <div className="flex justify-between items-center mb-6">
+                                        <div>
+                                            <h3 className="font-bold text-gray-800 text-lg">Draft Manifest (Sementara)</h3>
+                                            <p className="text-gray-500 text-sm flex items-center gap-2"><span className="font-bold">{draftItems.length} Paket</span><span className="text-gray-300">|</span><span>{sessionSettings.origin} - {sessionSettings.date}</span></p>
+                                        </div>
+                                        {draftItems.length > 0 && (
+                                            <button onClick={handleSaveManifest} className="bg-green-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-700 transition shadow flex items-center animate-bounce">
+                                                <Icon name="Box" size={18} className="mr-2"/> Simpan Manifest
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="flex-grow overflow-x-auto border rounded-lg">
+                                        <table className="w-full text-sm">
+                                            <thead className="bg-gray-50 text-gray-600 font-bold uppercase text-xs">
+                                                <tr>
+                                                    <th className="py-3 px-4 text-left">No</th>
+                                                    <th className="py-3 px-4 text-left">AWB</th>
+                                                    <th className="py-3 px-4 text-left">Status</th>
+                                                    <th className="py-3 px-4 text-left">Deskripsi</th>
+                                                    <th className="py-3 px-4 text-center">Aksi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-100">
+                                                {draftItems.length === 0 ? (
+                                                    <tr><td colSpan="5" className="text-center py-20 text-gray-400">Draft kosong. Silahkan scan paket.</td></tr>
+                                                ) : draftItems.map((item, idx) => (
+                                                    <tr key={idx} className="hover:bg-gray-50">
+                                                        <td className="py-3 px-4 text-center text-gray-400">{draftItems.length - idx}</td>
+                                                        <td className="py-3 px-4 font-mono font-bold">{item.awb || '-'}</td>
+                                                        <td className="py-3 px-4"><span className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs border">{item.status}</span></td>
+                                                        <td className="py-3 px-4 text-gray-600">{item.description || '-'}</td>
+                                                        <td className="py-3 px-4 text-center flex justify-center gap-2">
+                                                            <button onClick={() => openEditDraftModal(idx)} className="text-blue-500 hover:text-blue-700 p-1 bg-blue-50 rounded"><Icon name="Edit" size={14}/></button>
+                                                            <button onClick={() => setDraftItems(draftItems.filter((_, i) => i !== idx))} className="text-red-500 hover:text-red-700 p-1 bg-red-50 rounded"><Icon name="Trash" size={14}/></button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* MODE 2: RIWAYAT MANIFEST */}
+                    {viewMode === 'history' && (
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden animate-fade-in">
+                            <div className="p-6 border-b border-gray-100 bg-gray-50">
+                                <h3 className="font-bold text-gray-800 text-lg">Riwayat Surat Jalan (Manifest)</h3>
+                                <p className="text-gray-500 text-sm">Daftar manifest yang sudah tersimpan. Klik "Lihat Isi" untuk melihat detail dan menghapus item.</p>
+                            </div>
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-white text-gray-500 uppercase border-b border-gray-100 text-xs">
+                                    <tr>
+                                        <th className="px-6 py-4">Tanggal</th>
+                                        <th className="px-6 py-4">ID Manifest</th>
+                                        <th className="px-6 py-4">Asal HUB</th>
+                                        <th className="px-6 py-4 text-center">Total Paket</th>
+                                        <th className="px-6 py-4 text-right">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {manifests.length === 0 ? (
+                                        <tr><td colSpan="5" className="text-center py-10 text-gray-400">Belum ada riwayat manifest.</td></tr>
+                                    ) : manifests.map((m) => (
+                                        <tr key={m.id} className="hover:bg-gray-50 transition-colors">
+                                            <td className="px-6 py-4 font-medium text-gray-900">{m.date}</td>
+                                            <td className="px-6 py-4 font-mono text-gray-600 text-xs">{m.manifestId}</td>
+                                            <td className="px-6 py-4"><span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs border border-blue-100 font-bold">{m.origin}</span></td>
+                                            <td className="px-6 py-4 text-center font-bold text-lg">{m.totalItems}</td>
+                                            <td className="px-6 py-4 text-right space-x-2">
+                                                <button 
+                                                    onClick={() => openDetailManifest(m)}
+                                                    className="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 text-blue-700 text-xs font-bold rounded hover:bg-blue-50 transition"
+                                                >
+                                                    <Icon name="Eye" size={14} className="mr-1"/> Lihat Isi
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleReprintHistory(m)}
+                                                    className="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs font-bold rounded hover:bg-gray-50 transition"
+                                                >
+                                                    <Icon name="Printer" size={14}/>
+                                                </button>
+                                                <button 
+                                                    onClick={() => initiateDelete('manifest', m.id)}
+                                                    className="inline-flex items-center px-3 py-1.5 bg-red-50 border border-red-200 text-red-700 text-xs font-bold rounded hover:bg-red-100 transition"
+                                                >
+                                                    <Icon name="Trash" size={14}/>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {/* Modal Detail & Delete Item */}
+                    {detailManifest && (
+                        <Modal title={`Isi Manifest: ${detailManifest.manifestId}`} onClose={() => setDetailManifest(null)} maxWidth="max-w-2xl">
+                            <div className="mb-4 text-sm text-gray-600 flex justify-between bg-gray-50 p-3 rounded">
+                                <span>Tanggal: <strong>{detailManifest.date}</strong></span>
+                                <span>Total: <strong>{detailManifest.items.length} Paket</strong></span>
+                            </div>
+                            <div className="overflow-auto max-h-[60vh]">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-100 text-xs uppercase text-gray-600">
+                                        <tr>
+                                            <th className="p-2">AWB</th>
+                                            <th className="p-2">Status</th>
+                                            <th className="p-2">Desc</th>
+                                            <th className="p-2 text-right">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {detailManifest.items.map(item => (
+                                            <tr key={item.id}>
+                                                <td className="p-2 font-mono">{item.awb || '-'}</td>
+                                                <td className="p-2">{item.packageStatus}</td>
+                                                <td className="p-2 text-gray-500 text-xs">{item.description}</td>
+                                                <td className="p-2 text-right">
+                                                    <button 
+                                                        onClick={() => initiateDelete('package', item.id)}
+                                                        className="text-red-500 hover:text-red-700 text-xs border border-red-200 px-2 py-1 rounded bg-red-50 hover:bg-red-100"
+                                                    >
+                                                        Hapus
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </Modal>
+                    )}
+
+                    {/* Modal Edit Draft */}
+                    {editDraft && (
+                        <Modal title="Edit Item Draft" onClose={() => setEditDraft(null)}>
+                            <div className="space-y-4">
+                                <div><label className="block text-sm font-semibold text-gray-700 mb-1">Status Paket</label><select value={editDraft.data.status} onChange={e => setEditDraft({...editDraft, data: {...editDraft.data, status: e.target.value}})} className="w-full border border-gray-300 rounded-lg p-2.5">{statusOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</select></div>
+                                <div><label className="block text-sm font-semibold text-gray-700 mb-1">No Resi (AWB)</label><input type="text" value={editDraft.data.awb} onChange={e => setEditDraft({...editDraft, data: {...editDraft.data, awb: e.target.value}})} className="w-full border border-gray-300 rounded-lg p-2.5 font-mono"/></div>
+                                <div><label className="block text-sm font-semibold text-gray-700 mb-1">Deskripsi</label><textarea value={editDraft.data.description} onChange={e => setEditDraft({...editDraft, data: {...editDraft.data, description: e.target.value}})} className="w-full border border-gray-300 rounded-lg p-2.5" rows="3"></textarea></div>
+                                <div className="flex justify-end gap-2 mt-4"><button onClick={() => setEditDraft(null)} className="px-4 py-2 bg-gray-100 rounded-lg">Batal</button><button onClick={saveEditDraft} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Simpan Perubahan</button></div>
+                            </div>
+                        </Modal>
+                    )}
+
+                    {/* Modal Konfirmasi Print */}
+                    {showPrintConfirm && (
+                        <ConfirmDialog 
+                            message="Manifest berhasil disimpan. Apakah Anda ingin mencetak Surat Jalan Serah Terima sekarang?"
+                            onConfirm={handleConfirmPrint}
+                            onCancel={() => setShowPrintConfirm(false)}
+                            confirmText="Ya, Cetak Surat Jalan"
+                            cancelText="Tutup"
+                        />
+                    )}
+
+                    {/* Security Check Modal */}
+                    {securityModal.show && (
+                        <SecurityCheckModal 
+                            onClose={() => setSecurityModal({ show: false, itemType: null, itemId: null })}
+                            onConfirm={handleSecurityConfirm}
+                            isProcessing={false}
+                        />
+                    )}
+                </div>
+            );
+        };
+
+        const PrintManifest = ({ items, type }) => (
+            <div className="print-only p-8 font-serif">
+                <div className="border-b-2 border-black pb-4 mb-4 flex justify-between items-center">
+                    <div>
+                        <h1 className="text-2xl font-bold uppercase">Surat Jalan Serah Terima</h1>
+                        <p className="text-sm">Tipe: {type === 'OUT' ? 'Handover HUB -> HD' : 'Return HD -> HUB'}</p>
+                    </div>
+                    <div className="text-right">
+                        <p>No. Manifest: {items[0]?.manifestId || `${type}/${new Date().getFullYear()}/XXX`}</p>
+                        <p>Tanggal: {new Date().toLocaleDateString('id-ID')}</p>
+                    </div>
+                </div>
+                <table className="w-full border-collapse border border-gray-400 text-sm">
+                    <thead>
+                        <tr className="bg-gray-100">
+                            <th className="border border-gray-400 p-2">No</th>
+                            <th className="border border-gray-400 p-2">Status</th>
+                            <th className="border border-gray-400 p-2">No Resi (AWB)</th>
+                            <th className="border border-gray-400 p-2">Deskripsi / Ciri Paket</th>
+                            <th className="border border-gray-400 p-2">Asal HUB</th>
+                            <th className="border border-gray-400 p-2">Catatan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {items.map((item, idx) => (
+                            <tr key={item.id}>
+                                <td className="border border-gray-400 p-2 text-center">{idx + 1}</td>
+                                <td className="border border-gray-400 p-2 text-center text-xs uppercase font-bold">{item.packageStatus || item.status}</td>
+                                <td className="border border-gray-400 p-2 font-mono">{item.awb || '-'}</td>
+                                <td className="border border-gray-400 p-2">{item.description || '-'}</td>
+                                <td className="border border-gray-400 p-2 text-center">{item.origin}</td>
+                                <td className="border border-gray-400 p-2">{type === 'IN' ? item.hdNote : ''}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+                <div className="mt-12 flex justify-between px-10">
+                    <div className="text-center"><p className="mb-16">Diserahkan Oleh,</p><p className="font-bold border-t border-black pt-1 px-4">({type === 'OUT' ? 'Tim HUB' : 'Tim HD'})</p></div>
+                    <div className="text-center"><p className="mb-16">Diterima Oleh,</p><p className="font-bold border-t border-black pt-1 px-4">({type === 'OUT' ? 'Tim HD' : 'Tim HUB'})</p></div>
+                </div>
+            </div>
+        );
+
+        // --- MAIN APP COMPONENT ---
+        const App = () => {
+            const [currentUser, setCurrentUser] = useState(null);
+            const [users, setUsers] = useState([]);
+            const [data, setData] = useState([]);
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [isLoading, setIsLoading] = useState(true);
+            const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+            const [printItems, setPrintItems] = useState([]);
+            const [printType, setPrintType] = useState('OUT');
+
+            const showToast = (message, type = 'success') => {
+                setToast({ show: true, message, type });
+            };
+
+            const handlePrint = (items, type) => {
+                if(items.length === 0) return showToast("Tidak ada data untuk dicetak", 'error');
+                setPrintItems(items);
+                setPrintType(type);
+                setTimeout(() => window.print(), 100);
+            };
+
+            useEffect(() => {
+                const init = async () => {
+                    try {
+                        await signInAnonymously(auth);
+
+                        const qPackages = query(collection(db, "packages"), orderBy("createdAt", "desc"));
+                        onSnapshot(qPackages, (snapshot) => {
+                            const pkgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                            setData(pkgs);
+                        });
+
+                        const qUsers = query(collection(db, "users"));
+                        onSnapshot(qUsers, async (snapshot) => {
+                            const usrs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                            const adminExists = usrs.some(u => u.nik === 'admin');
+                            if (!adminExists) {
+                                await addDoc(collection(db, 'users'), { nama: 'Super Admin', nik: 'admin', password: 'admin', role: 'admin', createdAt: serverTimestamp() });
+                            }
+                            setUsers(usrs);
+                            setIsLoading(false);
+                        });
+                    } catch (error) {
+                        console.error("Firebase Auth Error:", error);
+                        setIsLoading(false);
+                    }
+                };
+                init();
+            }, []);
+
+            const handleLogin = (user) => {
+                setCurrentUser(user);
+                if (user.role === 'hub') setActiveTab('hub');
+                else if (user.role === 'hd') setActiveTab('hd');
+                else if (user.role === 'admin') setActiveTab('admin');
+                else setActiveTab('dashboard');
+            };
+
+            const handleLogout = () => {
+                setCurrentUser(null);
+                setActiveTab('dashboard');
+                showToast("Anda telah keluar.", 'success');
+            };
+
+            if (!currentUser) return (
+                <>
+                    {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} />}
+                    <LoginScreen onLogin={handleLogin} users={users} isLoading={isLoading} showToast={showToast} />
+                </>
+            );
+
+            return (
+                <div className="min-h-screen flex flex-col no-print text-gray-800 bg-gray-50">
+                    <PrintManifest items={printItems} type={printType} />
+                    {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} />}
+                    
+                    <header className="bg-white shadow-sm sticky top-0 z-40 border-b border-gray-200">
+                        <div className="container mx-auto px-6 py-3 flex justify-between items-center">
+                            <div className="flex items-center space-x-4">
+                                <div className="bg-gradient-to-r from-blue-600 to-blue-500 p-2.5 rounded-xl text-white shadow-lg"><Icon name="Box" size={24}/></div>
+                                <div>
+                                    <h1 className="font-extrabold text-xl leading-none text-gray-800 tracking-tight">Logistic Portal</h1>
+                                    <p className="text-xs text-gray-500 mt-1 font-medium">Halo, <span className="text-blue-600">{currentUser.nama}</span></p>
+                                </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                {(currentUser.role === 'admin' || currentUser.role === 'user') && <button onClick={() => setActiveTab('dashboard')} className={`px-4 py-2 text-sm font-bold rounded-lg transition ${activeTab === 'dashboard' ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}>Dashboard</button>}
+                                {(currentUser.role === 'admin' || currentUser.role === 'hub') && <button onClick={() => setActiveTab('hub')} className={`px-4 py-2 text-sm font-bold rounded-lg transition ${activeTab === 'hub' ? 'bg-blue-50 text-blue-700' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}>HUB Ops</button>}
+                                {(currentUser.role === 'admin' || currentUser.role === 'hd') && <button onClick={() => setActiveTab('hd')} className={`px-4 py-2 text-sm font-bold rounded-lg transition ${activeTab === 'hd' ? 'bg-orange-50 text-orange-700' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}>HD Ops</button>}
+                                {currentUser.role === 'admin' && <button onClick={() => setActiveTab('admin')} className={`px-4 py-2 text-sm font-bold rounded-lg transition flex items-center ${activeTab === 'admin' ? 'bg-purple-50 text-purple-700' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}><Icon name="Settings" size={16} className="mr-2"/> Users</button>}
+                                <button onClick={handleLogout} className="ml-4 text-sm text-red-500 hover:text-red-700 hover:bg-red-50 flex items-center px-4 py-2 rounded-lg transition font-bold"><Icon name="LogOut" size={18} className="mr-2"/> Keluar</button>
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="flex-grow container mx-auto px-6 py-8">
+                        {activeTab === 'dashboard' && <DashboardView data={data} />}
+                        {activeTab === 'hub' && <HubView data={data} showToast={showToast} onPrint={handlePrint} currentUser={currentUser} />}
+                        {activeTab === 'hd' && <HdView data={data} showToast={showToast} onPrint={handlePrint} />}
+                        {activeTab === 'admin' && <AdminPanel users={users} showToast={showToast} />}
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
