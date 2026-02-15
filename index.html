@@ -216,7 +216,8 @@
                         </header>
 
                         {activeTab === 'dashboard' && <DashboardView packages={packages} handovers={handovers} />}
-                        {activeTab === 'hub-input' && <HubInputView remarks={remarksList} showToast={showToast} currentUser={currentUser} />}
+                        {/* UPDATE: Menambahkan prop handovers ke HubInputView agar bisa hitung nomor urut */}
+                        {activeTab === 'hub-input' && <HubInputView remarks={remarksList} showToast={showToast} currentUser={currentUser} handovers={handovers} />}
                         {activeTab === 'hd-input' && <HdInputView packages={packages} showToast={showToast} currentUser={currentUser} />}
                         {activeTab === 'surat-jalan' && <SuratJalanList handovers={handovers} />}
                         {activeTab === 'settings' && <SettingsView remarks={remarksList} setRemarks={setRemarksList} showToast={showToast} currentUser={currentUser} />}
@@ -491,6 +492,14 @@
         const SuratJalanPrintModal = ({ data, onClose }) => {
             if (!data) return null;
 
+            // UPDATE: Auto-print saat modal terbuka
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    window.print();
+                }, 500); // Delay sedikit untuk memastikan render selesai
+                return () => clearTimeout(timer);
+            }, []);
+
             // Helper untuk menangani format data lama (string) dan baru (object)
             const getRowData = (item) => {
                 if (typeof item === 'string') {
@@ -510,17 +519,38 @@
 
             return (
                 <div className="fixed inset-0 z-[80] bg-slate-900/50 flex items-center justify-center p-4 overflow-y-auto">
-                    <Card className="max-w-4xl w-full p-8 bg-white relative my-8">
+                    {/* INJECTED PRINT STYLES */}
+                    <style>{`
+                        @media print {
+                            @page { size: landscape; margin: 0.5cm; }
+                            body { visibility: hidden; }
+                            .print-modal-content {
+                                visibility: visible;
+                                position: absolute;
+                                left: 0;
+                                top: 0;
+                                width: 100% !important;
+                                max-width: none !important;
+                                margin: 0 !important;
+                                padding: 20px !important;
+                                box-shadow: none !important;
+                                border: none !important;
+                            }
+                            .print-modal-content * { visibility: visible; }
+                            .no-print { display: none !important; }
+                        }
+                    `}</style>
+
+                    <Card className="max-w-[90%] w-full p-8 bg-white relative my-8 print-modal-content">
                         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 no-print">
                             <Icon name="x" size={24} />
                         </button>
                         
-                        <div className="p-4 space-y-6 print-area">
+                        <div className="p-4 space-y-6">
                             {/* KOP SURAT */}
                             <div className="flex justify-between items-start border-b-4 border-slate-800 pb-4 mb-6">
                                 <div>
-                                    <h2 className="text-3xl font-black uppercase tracking-wider text-slate-800">Surat Jalan</h2>
-                                    <p className="text-sm font-bold text-slate-500 mt-1 uppercase tracking-widest">Serah Terima Paket</p>
+                                    <h2 className="text-3xl font-black uppercase tracking-wider text-slate-800">FORM SERAH TERIMA</h2>
                                 </div>
                                 <div className="text-right">
                                     <p className="font-mono text-xl font-bold text-slate-800">{data.id}</p>
@@ -591,7 +621,7 @@
                         
                         <div className="mt-8 pt-4 border-t border-slate-200 flex justify-end gap-3 no-print">
                             <Button onClick={() => window.print()} variant="primary" className="bg-slate-800 hover:bg-slate-900">
-                                <Icon name="printer" size={18} /> Cetak Sekarang
+                                <Icon name="printer" size={18} /> Cetak Ulang
                             </Button>
                             <Button onClick={onClose} variant="secondary">Tutup</Button>
                         </div>
@@ -600,8 +630,7 @@
             );
         };
 
-        function HubInputView({ remarks, showToast, currentUser }) {
-            // ... (Kode state tetap sama)
+        function HubInputView({ remarks, showToast, currentUser, handovers }) {
             const [scannedList, setScannedList] = useState([]);
             const [currentAwb, setCurrentAwb] = useState("");
             const [currentRemark, setCurrentRemark] = useState(remarks[0]);
@@ -611,7 +640,24 @@
             const [editState, setEditState] = useState({ isOpen: false, item: null, form: { awb: "", remarks_hub: "", keterangan_fisik: "" } });
             const [printData, setPrintData] = useState(null);
 
-            // ... (Kode addPackageToList, triggerDelete, triggerEdit, saveEdit tetap sama)
+            // LOGIKA GENERATE NOMOR HANDOVER (DDMMYYYY-XXXX)
+            const generatedHandoverId = useMemo(() => {
+                const today = new Date();
+                const dd = String(today.getDate()).padStart(2, '0');
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const yyyy = today.getFullYear();
+                const datePrefix = `${dd}${mm}${yyyy}`;
+                
+                // Filter handover yang dibuat hari ini (berdasarkan prefix ID yang mengandung tanggal ini)
+                // Asumsi ID disimpan dengan format yang sama
+                const countToday = handovers.filter(h => h.id.startsWith(datePrefix)).length;
+                const nextSequence = String(countToday + 1).padStart(4, '0');
+                
+                return `${datePrefix}-${nextSequence}`;
+            }, [handovers]);
+
+            const currentDateStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
             const addPackageToList = (e) => {
                 e.preventDefault();
                 if (!currentAwb && !currentKeterangan) return;
@@ -685,11 +731,11 @@
                 
                 try {
                     const batch = writeBatch(db);
-                    const handoverId = `HO-HUB-${Date.now()}`;
+                    // GUNAKAN ID YANG SUDAH DIGENERATE
+                    const handoverId = generatedHandoverId;
                     
                     const handoverRef = doc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'handovers'), handoverId);
                     
-                    // UPDATE: Menyimpan data item secara lengkap (Object), bukan string saja
                     const detailedItems = scannedList.map(i => ({
                         awb: i.awb || "-",
                         remarks: i.remarks_hub || "-",
@@ -702,7 +748,7 @@
                         sender: currentUser.name,
                         total_items: scannedList.length,
                         timestamp: { toDate: () => new Date() },
-                        items: detailedItems // Simpan object lengkap
+                        items: detailedItems
                     };
 
                     batch.set(handoverRef, {
@@ -747,20 +793,16 @@
 
             return (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative">
-                    {/* MODAL KONFIRMASI */}
+                    {/* MODAL KONFIRMASI & CETAK & EDIT (Tetap sama) */}
                     <ConfirmModal 
                         isOpen={confirmState.isOpen} 
                         data={confirmState} 
                         onClose={() => setConfirmState(prev => ({ ...prev, isOpen: false }))} 
                     />
-
-                    {/* MODAL CETAK SURAT JALAN */}
                     <SuratJalanPrintModal 
                         data={printData} 
                         onClose={() => setPrintData(null)} 
                     />
-
-                    {/* MODAL EDIT */}
                     {editState.isOpen && (
                         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 animate-in fade-in zoom-in duration-200">
                             <Card className="w-full max-w-md p-6 shadow-2xl">
@@ -837,7 +879,27 @@
 
                     <div className="lg:col-span-8">
                         <Card className="min-h-[400px]">
-                            <div className="p-4 border-b border-slate-100 font-bold text-slate-700">Daftar Tunggu Handover</div>
+                            {/* UPDATE: Header Informasi Daftar Tunggu */}
+                            <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+                                <div className="flex flex-wrap justify-between items-center gap-4">
+                                    <div className="font-bold text-slate-700 text-lg">Daftar Tunggu Handover</div>
+                                    <div className="flex gap-4 text-xs md:text-sm">
+                                        <div className="bg-white px-3 py-1 rounded border shadow-sm">
+                                            <span className="text-slate-500 block text-[10px] uppercase font-bold">Tanggal</span>
+                                            <span className="font-mono font-medium">{currentDateStr}</span>
+                                        </div>
+                                        <div className="bg-white px-3 py-1 rounded border shadow-sm">
+                                            <span className="text-slate-500 block text-[10px] uppercase font-bold">HUB (Pengirim)</span>
+                                            <span className="font-medium text-blue-600">{currentUser.name}</span>
+                                        </div>
+                                        <div className="bg-blue-50 px-3 py-1 rounded border border-blue-100 shadow-sm">
+                                            <span className="text-blue-500 block text-[10px] uppercase font-bold">No. Handover</span>
+                                            <span className="font-mono font-bold text-blue-700">{generatedHandoverId}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm">
                                     <thead className="bg-slate-50 text-slate-500 text-xs">
