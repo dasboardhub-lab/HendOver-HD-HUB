@@ -3,48 +3,227 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Validasi Paket HUB-HD</title>
-    
+    <title>Sistem Manajemen Logistik</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- React & ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
-    <!-- Babel (untuk JSX) -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
-        .font-mono { font-family: 'JetBrains Mono', monospace; }
-        /* Hide scrollbar for Chrome, Safari and Opera */
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none;  scrollbar-width: none; }
-        @media print { .no-print { display: none; } }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .modal-bg {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Print Styles */
+        @media print {
+            body * { visibility: hidden; }
+            #print-area, #print-area * { visibility: visible; }
+            #print-area { position: absolute; left: 0; top: 0; width: 100%; }
+            .no-print { display: none !important; }
+        }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800">
-    <div id="root"></div>
+<body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col relative">
 
-    <!-- MAIN SCRIPT -->
-    <script type="text/babel" data-type="module">
+    <!-- Notifikasi Toast -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 no-print"></div>
+
+    <!-- Area Cetak (Hidden by default) -->
+    <div id="print-area" class="hidden bg-white p-8">
+        <div class="border-b-2 border-black pb-4 mb-4 flex justify-between items-center">
+            <div class="text-left">
+                <h1 class="text-2xl font-bold uppercase">Berita Acara Serah Terima</h1>
+                <p class="text-sm">Logistics Handover Manifest</p>
+            </div>
+            <div class="text-right">
+                <h2 class="text-xl font-mono font-bold" id="print-no-handover"></h2>
+            </div>
+        </div>
+        <div class="flex justify-between mb-6">
+            <div>
+                <p><strong>Tanggal:</strong> <span id="print-date">-</span></p>
+                <p><strong>Asal HUB:</strong> <span id="print-hub-origin">-</span></p>
+                <p><strong>PIC Pengirim:</strong> <span id="print-pic">-</span></p>
+            </div>
+            <div class="text-right">
+                <p><strong>Total Paket:</strong> <span id="print-total">-</span></p>
+            </div>
+        </div>
+        <table class="w-full border-collapse border border-black text-sm">
+            <thead>
+                <tr class="bg-gray-200">
+                    <th class="border border-black p-2 text-center w-10">No</th>
+                    <th class="border border-black p-2">AWB / Resi</th>
+                    <th class="border border-black p-2">Remarks</th>
+                    <th class="border border-black p-2">Ciri-ciri</th>
+                </tr>
+            </thead>
+            <tbody id="print-table-body">
+                <!-- Data print -->
+            </tbody>
+        </table>
+        <div class="mt-12 flex justify-between px-10">
+            <div class="text-center">
+                <p class="mb-16">Diserahkan Oleh,</p>
+                <p class="font-bold underline" id="print-signer-hub">PIC HUB</p>
+            </div>
+            <div class="text-center">
+                <p class="mb-16">Diterima Oleh,</p>
+                <p class="font-bold underline">Driver / Courier</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODALS ================= -->
+
+    <!-- Modal Riwayat Handover (Untuk Cetak Ulang) -->
+    <div id="history-modal" class="fixed inset-0 z-40 hidden items-center justify-center modal-bg backdrop-blur-sm no-print">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl p-6 h-[500px] flex flex-col">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-xl font-bold text-gray-800">Riwayat Serah Terima (Surat Jalan)</h3>
+                <button onclick="window.closeModal('history-modal')" class="text-gray-400 hover:text-red-500"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="overflow-auto flex-grow">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-gray-100 sticky top-0">
+                        <tr>
+                            <th class="p-3">No. Serah Terima</th>
+                            <th class="p-3">Tanggal</th>
+                            <th class="p-3">Asal HUB</th>
+                            <th class="p-3">Total Paket</th>
+                            <th class="p-3 text-right">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-list-body" class="divide-y divide-gray-100">
+                        <tr><td colspan="5" class="text-center p-4">Memuat riwayat...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Konfirmasi Custom (NEW) -->
+    <div id="confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg backdrop-blur-sm no-print">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center transform scale-100 transition-transform">
+            <div class="text-yellow-500 text-5xl mb-4"><i class="fas fa-exclamation-circle"></i></div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">Konfirmasi</h3>
+            <p id="confirm-msg" class="text-gray-600 mb-6 text-sm leading-relaxed">Apakah Anda yakin?</p>
+            <div class="flex gap-3">
+                <button id="btn-confirm-cancel" class="flex-1 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-bold transition">Batal</button>
+                <button id="btn-confirm-yes" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-lg transition">Ya, Lanjutkan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Edit Data Paket -->
+    <div id="edit-paket-modal" class="fixed inset-0 z-40 hidden items-center justify-center modal-bg backdrop-blur-sm no-print">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Edit Data Paket</h3>
+            <input type="hidden" id="edit-paket-id">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-xs font-bold text-gray-500">Tanggal</label>
+                    <input type="date" id="edit-paket-date" class="w-full p-2 border rounded">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500">AWB</label>
+                    <input type="text" id="edit-paket-awb" class="w-full p-2 border rounded">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500">Remarks HUB</label>
+                    <select id="edit-paket-remaks-hub" class="w-full p-2 border rounded remarks-select"></select>
+                </div>
+                 <div>
+                    <label class="text-xs font-bold text-gray-500">PIC HUB</label>
+                    <input type="text" id="edit-paket-pic-hub" class="w-full p-2 border rounded bg-gray-50">
+                </div>
+                <div class="col-span-2">
+                    <label class="text-xs font-bold text-gray-500">Ciri Ciri Parcel</label>
+                    <input type="text" id="edit-paket-ciri" class="w-full p-2 border rounded">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500">Tanggal Kembali</label>
+                    <input type="date" id="edit-paket-date-back" class="w-full p-2 border rounded">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500">Remarks HD</label>
+                    <select id="edit-paket-remaks-hd" class="w-full p-2 border rounded remarks-select"></select>
+                </div>
+                 <div>
+                    <label class="text-xs font-bold text-gray-500">PIC HD</label>
+                    <input type="text" id="edit-paket-pic-hd" class="w-full p-2 border rounded">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500">Status</label>
+                    <select id="edit-paket-status" class="w-full p-2 border rounded">
+                        <option value="Proses">Proses</option>
+                        <option value="Selesai">Selesai</option>
+                        <option value="Retur">Retur</option>
+                        <option value="Pending">Pending</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="window.closeModal('edit-paket-modal')" class="flex-1 py-2 bg-gray-200 rounded-lg">Batal</button>
+                <button onclick="window.saveEditedPaket()" class="flex-1 py-2 bg-blue-600 text-white rounded-lg">Update Data</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shared Edit Modal for Users/Master -->
+    <div id="edit-modal" class="fixed inset-0 z-40 hidden items-center justify-center modal-bg backdrop-blur-sm no-print">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Edit Data User</h3>
+            <input type="hidden" id="edit-doc-id">
+            <div class="space-y-4">
+                <input type="text" id="edit-fullname" class="w-full px-4 py-2 border rounded-lg" placeholder="Nama Lengkap">
+                <input type="text" id="edit-username" class="w-full px-4 py-2 border rounded-lg bg-gray-100" readonly>
+                <select id="edit-role" class="w-full px-4 py-2 border rounded-lg bg-white">
+                    <option value="admin">Admin</option>
+                    <option value="HUB">HUB</option>
+                    <option value="HD">HD</option>
+                    <option value="Visitor">Visitor</option>
+                </select>
+                <input type="text" id="edit-password" placeholder="Password Baru (Opsional)" class="w-full px-4 py-2 border rounded-lg border-yellow-300 bg-yellow-50">
+                <div class="flex gap-3 mt-4">
+                    <button onclick="window.closeModal('edit-modal')" class="flex-1 py-2 bg-gray-200 rounded-lg">Batal</button>
+                    <button onclick="window.saveEditedUser()" class="flex-1 py-2 bg-blue-600 text-white rounded-lg">Simpan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= APP CONTAINER ================= -->
+    <div id="app-container" class="flex-grow flex items-center justify-center p-4 no-print">
+        <div class="text-center">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-2"></div>
+            <p class="text-gray-500">Memuat Sistem...</p>
+        </div>
+    </div>
+
+    <footer class="text-center p-4 text-xs text-gray-400 no-print">
+        Sistem Logistik V4.5 (Grouped Header Layout) &copy; 2024
+    </footer>
+
+    <!-- Script Utama -->
+    <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { 
-            getFirestore, collection, doc, setDoc, getDoc, getDocs, 
-            query, onSnapshot, addDoc, updateDoc, writeBatch, deleteDoc, serverTimestamp, 
-            orderBy, where, limit 
-        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, updateDoc, writeBatch, query, where, onSnapshot, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // --- REACT HOOKS DESTRUCTURING (FIXED) ---
-        const { useState, useEffect, useMemo } = React;
-
-        // --- FIREBASE CONFIGURATION ---
         const firebaseConfig = {
             apiKey: "AIzaSyAZFpX5OxSVIG7f58U60dVJHufHORFQuIg",
             authDomain: "hub-dashboard-92428.firebaseapp.com",
@@ -55,1312 +234,947 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
         const auth = getAuth(app);
-        // Menggunakan ID unik agar data tidak tercampur dengan user lain di firestore yang sama
-        const APP_ID = 'hub-hd-prod-v1'; 
+        const db = getFirestore(app);
 
-        // --- ICONS (Lucide Wrapper) ---
-        const Icon = ({ name, size = 20, className = "" }) => {
-            useEffect(() => {
-                lucide.createIcons();
-            }, [name]);
-            return <i data-lucide={name} className={className} style={{ width: size, height: size }}></i>;
+        // Collections
+        const APP_ID = "login-system-v2"; 
+        const USERS_COLLECTION = collection(db, 'artifacts', APP_ID, 'public', 'data', 'users');
+        const HUBS_COLLECTION = collection(db, 'artifacts', APP_ID, 'public', 'data', 'hubs');
+        const REMARKS_COLLECTION = collection(db, 'artifacts', APP_ID, 'public', 'data', 'remarks');
+        const PACKAGES_COLLECTION = collection(db, 'artifacts', APP_ID, 'public', 'data', 'packages');
+        const DRAFTS_COLLECTION = collection(db, 'artifacts', APP_ID, 'public', 'data', 'drafts');
+        const HANDOVERS_COLLECTION = collection(db, 'artifacts', APP_ID, 'public', 'data', 'handovers'); 
+        const ADMIN_CONFIG_DOC = doc(db, 'artifacts', APP_ID, 'public', 'data', 'settings', 'admin_config');
+
+        // Global State
+        let currentAdminView = 'users'; 
+        let cachedRemarks = [];
+        let cachedHubs = [];
+        let currentUserData = null;
+        let localDraft = []; 
+        let currentBatchId = null; 
+
+        // --- Utils ---
+        // Fungsi Custom Confirm (NEW)
+        window.showConfirm = (message) => {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('confirm-modal');
+                const msgEl = document.getElementById('confirm-msg');
+                const btnYes = document.getElementById('btn-confirm-yes');
+                const btnNo = document.getElementById('btn-confirm-cancel');
+
+                msgEl.innerText = message;
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+
+                // Clone button untuk menghapus event listener lama agar tidak menumpuk
+                const newBtnYes = btnYes.cloneNode(true);
+                const newBtnNo = btnNo.cloneNode(true);
+                btnYes.parentNode.replaceChild(newBtnYes, btnYes);
+                btnNo.parentNode.replaceChild(newBtnNo, btnNo);
+
+                const cleanup = () => {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                };
+
+                newBtnYes.onclick = () => { cleanup(); resolve(true); };
+                newBtnNo.onclick = () => { cleanup(); resolve(false); };
+            });
         };
 
-        // --- UI COMPONENTS ---
-        const Card = ({ children, className = "" }) => (
-            <div className={`bg-white rounded-xl shadow-sm border border-slate-200 ${className}`}>
-                {children}
-            </div>
-        );
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            const colors = type === 'error' ? 'bg-red-500' : (type === 'success' ? 'bg-green-500' : 'bg-blue-500');
+            el.className = `${colors} text-white px-4 py-3 rounded shadow-lg text-sm flex items-center gap-2 transform transition-all duration-300 translate-x-full`;
+            el.innerHTML = `<span>${message}</span>`;
+            container.appendChild(el);
+            setTimeout(() => el.classList.remove('translate-x-full'), 10);
+            setTimeout(() => { el.classList.add('opacity-0', 'translate-x-full'); setTimeout(() => el.remove(), 300); }, 3000);
+        }
 
-        const Button = ({ children, onClick, variant = "primary", className = "", disabled = false, type = "button" }) => {
-            const variants = {
-                primary: "bg-blue-600 text-white hover:bg-blue-700",
-                secondary: "bg-slate-100 text-slate-700 hover:bg-slate-200",
-                danger: "bg-red-500 text-white hover:bg-red-600",
-                success: "bg-emerald-500 text-white hover:bg-emerald-600",
-                outline: "border border-slate-300 text-slate-600 hover:bg-slate-50"
-            };
-            return (
-                <button 
-                    type={type}
-                    disabled={disabled}
-                    onClick={onClick} 
-                    className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${variants[variant]} ${className}`}
-                >
-                    {children}
-                </button>
-            );
-        };
+        // --- LOADERS ---
+        function loadUsers() {
+            onSnapshot(query(USERS_COLLECTION, orderBy('createdAt', 'desc')), (snap) => {
+                const el = document.getElementById('user-list-body');
+                if(!el) return;
+                document.getElementById('user-count').innerText = snap.size;
+                let h = '';
+                snap.forEach(d => {
+                    const dt = d.data();
+                    h += `
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                        <td class="p-3">${dt.fullname || ''}</td>
+                        <td class="p-3 font-mono text-xs">${dt.username}</td>
+                        <td class="p-3"><span class="bg-gray-100 px-2 py-1 rounded text-xs font-bold uppercase">${dt.role}</span></td>
+                        <td class="p-3 text-right">
+                            <button onclick="window.openEditModal('${d.id}','${dt.fullname || ''}','${dt.username}','${dt.role}')" class="text-blue-500 mr-2"><i class="fas fa-edit"></i></button>
+                            <button onclick="window.deleteUser('${d.id}')" class="text-red-500"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>`;
+                });
+                el.innerHTML = h || '<tr><td colspan="4" class="p-3 text-center text-gray-400">Kosong</td></tr>';
+            });
+        }
 
-        const Input = ({ label, value, onChange, placeholder, type = "text", className = "" }) => (
-            <div className={`flex flex-col gap-1 ${className}`}>
-                {label && <label className="text-sm font-semibold text-slate-600">{label}</label>}
-                <input 
-                    type={type}
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    placeholder={placeholder}
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all w-full"
-                />
-            </div>
-        );
+        function loadHubs() {
+            onSnapshot(query(HUBS_COLLECTION, orderBy('createdAt', 'desc')), (snap) => {
+                const el = document.getElementById('hub-list-body');
+                if(el) {
+                    let h = '';
+                    snap.forEach(d => {
+                        h += `<tr class="border-b border-gray-100 hover:bg-purple-50 group"><td class="p-3 flex justify-between"><span>${d.data().name}</span> <div class="opacity-0 group-hover:opacity-100"><button onclick="window.deleteHub('${d.id}')" class="text-red-500 text-xs">Hapus</button></div></td></tr>`;
+                    });
+                    el.innerHTML = h || '<tr><td class="p-3 text-center text-gray-400">Kosong</td></tr>';
+                }
+            });
+        }
 
-        const Toast = ({ message, type, onClose }) => (
-            <div className={`fixed bottom-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border animate-bounce ${
-                type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'
-            }`}>
-                <Icon name={type === 'success' ? 'check-circle-2' : 'alert-circle'} size={20} />
-                <span className="font-medium">{message}</span>
-                <button onClick={onClose}><Icon name="x" size={16} /></button>
-            </div>
-        );
+        function loadRemarks() {
+            onSnapshot(query(REMARKS_COLLECTION, orderBy('createdAt', 'desc')), (snap) => {
+                const el = document.getElementById('remark-list-body');
+                if(el) {
+                    let h = '';
+                    snap.forEach(d => {
+                        h += `<tr class="border-b border-gray-100 hover:bg-orange-50 group"><td class="p-3 flex justify-between"><span>${d.data().text}</span> <div class="opacity-0 group-hover:opacity-100"><button onclick="window.deleteRemark('${d.id}')" class="text-red-500 text-xs">Hapus</button></div></td></tr>`;
+                    });
+                    el.innerHTML = h || '<tr><td class="p-3 text-center text-gray-400">Kosong</td></tr>';
+                }
+            });
+        }
 
-        // --- MAIN APP ---
-        function App() {
-            const [currentUser, setCurrentUser] = useState(null); // { username, role, name, id }
-            const [activeTab, setActiveTab] = useState('dashboard');
-            const [toast, setToast] = useState(null);
+        function loadPackages() {
+            onSnapshot(query(PACKAGES_COLLECTION, orderBy('createdAt', 'desc')), (snap) => {
+                const tbody = document.getElementById('packet-list-body');
+                if(!tbody) return;
+                
+                if(snap.empty) { tbody.innerHTML = `<tr><td colspan="10" class="text-center p-4 text-gray-400">Belum ada data</td></tr>`; return; }
+                
+                let html = '';
+                snap.forEach(d => {
+                    const data = d.data();
+                    const statusColor = { 'Selesai': 'bg-green-100 text-green-800', 'Proses': 'bg-blue-100 text-blue-800', 'Retur': 'bg-red-100 text-red-800', 'Pending': 'bg-yellow-100 text-yellow-800' }[data.status] || 'bg-gray-100';
+                    const safe = (str) => (str || '').replace(/'/g, "\\'");
+
+                    html += `
+                        <tr class="hover:bg-gray-50 border-b border-gray-100">
+                            <td class="px-4 py-3">${data.date}</td>
+                            <td class="px-4 py-3 font-mono font-bold text-gray-700">${data.awb}</td>
+                            <td class="px-4 py-3"><span class="bg-gray-100 px-2 py-1 rounded text-xs">${data.remaksHub || '-'}</span></td>
+                            <td class="px-4 py-3 text-xs text-gray-500 truncate max-w-[150px]">${data.ciri || '-'}</td>
+                            <td class="px-4 py-3 bg-blue-50 text-xs font-semibold text-blue-800">${data.picHub || '-'}</td>
+                            <td class="px-4 py-3">${data.dateBack || '-'}</td>
+                            <td class="px-4 py-3"><span class="bg-gray-100 px-2 py-1 rounded text-xs">${data.remaksHd || '-'}</span></td>
+                            <td class="px-4 py-3 bg-yellow-50 text-xs font-semibold text-yellow-800">${data.picHd || '-'}</td>
+                            <td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs font-bold ${statusColor}">${data.status}</span></td>
+                            <td class="px-4 py-3 text-right">
+                                <button onclick="window.openEditPaketModal('${d.id}', '${safe(data.date)}', '${safe(data.awb)}', '${safe(data.remaksHub)}', '${safe(data.ciri)}', '${safe(data.dateBack)}', '${safe(data.remaksHd)}', '${data.status}', '${safe(data.picHub)}', '${safe(data.picHd)}')" class="text-blue-600 hover:text-blue-800 mr-2"><i class="fas fa-edit"></i></button>
+                                <button onclick="window.deletePacket('${d.id}')" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML = html;
+            });
+        }
+
+        async function initSystem() {
+            try {
+                await signInAnonymously(auth);
+                const adminDocSnap = await getDoc(ADMIN_CONFIG_DOC);
+                if (!adminDocSnap.exists()) await setDoc(ADMIN_CONFIG_DOC, { password: "123" });
+                
+                onSnapshot(REMARKS_COLLECTION, (snap) => {
+                    cachedRemarks = [];
+                    snap.forEach(d => cachedRemarks.push(d.data().text));
+                    updateSelects();
+                });
+
+                onSnapshot(HUBS_COLLECTION, (snap) => {
+                    cachedHubs = [];
+                    snap.forEach(d => cachedHubs.push(d.data().name));
+                    updateSelects();
+                });
+
+                renderLoginScreen();
+            } catch (error) { console.error(error); showToast("Database Error", 'error'); }
+        }
+
+        function updateSelects() {
+             const remSelects = document.querySelectorAll('.remarks-select');
+             remSelects.forEach(sel => populateSelect(sel, cachedRemarks, "- Pilih Remarks -"));
+             
+             const hubSelects = document.querySelectorAll('.hubs-select');
+             hubSelects.forEach(sel => populateSelect(sel, cachedHubs, "- Pilih Asal HUB -"));
+        }
+
+        function populateSelect(selectElement, dataArray, placeholder) {
+            const currentVal = selectElement.value;
+            selectElement.innerHTML = `<option value="">${placeholder}</option>` + 
+                dataArray.map(r => `<option value="${r}">${r}</option>`).join('');
+            if(currentVal) selectElement.value = currentVal;
+        }
+
+        // --- HANDOVER ID GENERATOR ---
+        function generateHandoverId(dateString) {
+            // Format: DDMMYYYY-XXXX
+            let dateObj = dateString ? new Date(dateString) : new Date();
+            const dd = String(dateObj.getDate()).padStart(2, '0');
+            const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const yyyy = dateObj.getFullYear();
+            const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+            return `${dd}${mm}${yyyy}-${randomSuffix}`;
+        }
+
+        // --- RENDER FUNCTIONS ---
+        const container = document.getElementById('app-container');
+
+        window.renderLoginScreen = function() {
+            container.innerHTML = `
+                <div class="glass-panel w-full max-w-md p-8 rounded-2xl shadow-2xl animate-fade-in">
+                    <h2 class="text-3xl font-bold text-center mb-6 text-gray-800">Logistic Portal</h2>
+                    
+                    <div class="flex mb-6 bg-gray-200 rounded-lg p-1">
+                        <button id="tab-user" class="flex-1 py-2 rounded-md text-sm font-bold bg-white shadow text-blue-600 transition-all" onclick="window.switchTab('user')">User</button>
+                        <button id="tab-admin" class="flex-1 py-2 rounded-md text-sm font-bold text-gray-500 hover:text-gray-700 transition-all" onclick="window.switchTab('admin')">Admin</button>
+                    </div>
+
+                    <div id="form-user" class="space-y-4">
+                        <input type="text" id="user-id" class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="User ID">
+                        <input type="password" id="user-pass" class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Password">
+                        <button onclick="window.handleUserLogin()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow-lg">Masuk User</button>
+                    </div>
+
+                    <div id="form-admin" class="space-y-4 hidden">
+                        <input type="password" id="admin-pass" class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-red-500" placeholder="Password Admin (Default: 123)">
+                        <button onclick="window.handleAdminLogin()" class="w-full bg-gray-800 text-white font-bold py-3 rounded-lg shadow-lg">Masuk Admin</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.renderAdminDashboard = function() {
+            container.innerHTML = `
+                <div class="w-full max-w-7xl animate-fade-in pb-10">
+                    <div class="bg-white rounded-xl shadow-lg p-4 mb-6 flex flex-col md:flex-row justify-between items-center border-t-4 border-blue-600">
+                        <div class="mb-4 md:mb-0">
+                            <h1 class="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
+                            <p class="text-sm text-gray-500">Logistik & Manajemen User</p>
+                        </div>
+                        <div class="flex items-center gap-2 bg-gray-100 p-1 rounded-lg overflow-x-auto">
+                            <button onclick="window.switchAdminView('users')" id="nav-users" class="px-4 py-2 rounded-md font-bold text-sm transition-all whitespace-nowrap"><i class="fas fa-users mr-2"></i>User & Master</button>
+                            <button onclick="window.switchAdminView('data')" id="nav-data" class="px-4 py-2 rounded-md font-bold text-sm transition-all whitespace-nowrap"><i class="fas fa-database mr-2"></i>Data Paket</button>
+                            <button onclick="window.switchAdminView('hub')" id="nav-hub" class="px-4 py-2 rounded-md font-bold text-sm transition-all whitespace-nowrap"><i class="fas fa-truck-loading mr-2"></i>Operasional HUB</button>
+                        </div>
+                        <button onclick="window.logout()" class="ml-2 bg-red-50 text-red-600 hover:bg-red-100 px-4 py-2 rounded-lg font-bold text-sm"><i class="fas fa-power-off"></i></button>
+                    </div>
+
+                    <!-- VIEW USERS -->
+                    <div id="view-users" class="hidden animate-fade-in">
+                         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+                            <div class="lg:col-span-4 space-y-6">
+                                <div class="bg-white rounded-xl shadow-lg p-6">
+                                    <h3 class="font-bold text-lg mb-4 text-blue-600 border-b pb-2">Buat User Baru</h3>
+                                    <div class="space-y-3">
+                                        <input type="text" id="new-fullname" placeholder="Nama Lengkap" class="w-full p-2 border rounded text-sm">
+                                        <input type="text" id="new-username" placeholder="User ID" class="w-full p-2 border rounded text-sm">
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <select id="new-role" class="w-full p-2 border rounded text-sm bg-white">
+                                                <option value="Visitor">Visitor</option>
+                                                <option value="HD">HD</option>
+                                                <option value="HUB">HUB</option>
+                                                <option value="admin">Admin</option>
+                                            </select>
+                                            <input type="text" id="new-password" placeholder="Password" class="w-full p-2 border rounded text-sm">
+                                        </div>
+                                        <button onclick="window.createUser()" class="w-full bg-blue-600 text-white py-2 rounded text-sm font-bold shadow">Simpan User</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="lg:col-span-8">
+                                <div class="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col h-[500px]">
+                                    <div class="p-4 border-b bg-gray-50 flex justify-between"><h3 class="font-bold text-gray-700">Daftar User</h3><span id="user-count" class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-bold">0</span></div>
+                                    <div class="overflow-auto flex-grow p-0"><table class="w-full text-left text-sm"><thead class="bg-gray-100 sticky top-0"><tr><th class="p-3">Nama</th><th class="p-3">ID</th><th class="p-3">Role</th><th class="p-3 text-right">Aksi</th></tr></thead><tbody id="user-list-body" class="divide-y divide-gray-100"></tbody></table></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col h-[400px]"><div class="p-4 bg-purple-50 border-b border-purple-100"><h3 class="font-bold text-purple-800 mb-2">Master HUB</h3><div class="flex gap-2"><input type="text" id="new-hub-name" placeholder="Nama HUB..." class="flex-1 p-2 border rounded text-sm"><button onclick="window.createHub()" class="bg-purple-600 text-white px-3 py-2 rounded font-bold text-sm">+</button></div></div><div class="overflow-auto flex-grow"><table class="w-full text-sm"><tbody id="hub-list-body" class="divide-y divide-gray-100"></tbody></table></div></div>
+                            <div class="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col h-[400px]"><div class="p-4 bg-orange-50 border-b border-orange-100"><h3 class="font-bold text-orange-800 mb-2">Master Remarks</h3><div class="flex gap-2"><input type="text" id="new-remark-text" placeholder="Isi Remarks..." class="flex-1 p-2 border rounded text-sm"><button onclick="window.createRemark()" class="bg-orange-600 text-white px-3 py-2 rounded font-bold text-sm">+</button></div></div><div class="overflow-auto flex-grow"><table class="w-full text-sm"><tbody id="remark-list-body" class="divide-y divide-gray-100"></tbody></table></div></div>
+                        </div>
+                    </div>
+
+                    <!-- VIEW DATA PAKET -->
+                    <div id="view-data" class="hidden animate-fade-in">
+                        <div class="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col min-h-[500px]">
+                            <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
+                                <h3 class="font-bold text-gray-700">Database Paket Logistik</h3>
+                                <div class="flex gap-2">
+                                    <input type="text" id="search-awb" onkeyup="window.filterPackages()" placeholder="Cari AWB..." class="px-3 py-1 border rounded text-sm">
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-sm whitespace-nowrap">
+                                    <thead class="bg-gray-100 text-xs uppercase text-gray-600 font-bold">
+                                        <tr>
+                                            <th class="px-4 py-3">Tanggal</th>
+                                            <th class="px-4 py-3">AWB</th>
+                                            <th class="px-4 py-3">Remarks HUB</th>
+                                            <th class="px-4 py-3">Ciri Parcel</th>
+                                            <th class="px-4 py-3 bg-blue-50">PIC HUB</th>
+                                            <th class="px-4 py-3">Tgl Kembali</th>
+                                            <th class="px-4 py-3">Remarks HD</th>
+                                            <th class="px-4 py-3 bg-yellow-50">PIC HD</th>
+                                            <th class="px-4 py-3">Status</th>
+                                            <th class="px-4 py-3 text-right">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="packet-list-body" class="divide-y divide-gray-200 bg-white">
+                                        <tr><td colspan="10" class="text-center p-4 text-gray-400">Memuat data...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VIEW HUB OPERATIONS -->
+                    <div id="view-hub" class="hidden animate-fade-in">
+                        
+                        <!-- Manifest / Batch Header -->
+                        <div class="bg-white rounded-xl shadow-lg p-6 mb-6 border-l-4 border-purple-600 flex flex-col md:flex-row justify-between items-end gap-4">
+                            <div class="w-full md:w-1/3">
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">No. Serah Terima (Manifest ID)</label>
+                                <div class="text-xl font-mono font-bold text-purple-700 bg-purple-50 p-2 rounded border border-purple-100" id="display-handover-id">-</div>
+                            </div>
+                            <div class="w-full md:w-1/3">
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tanggal</label>
+                                <input type="date" id="hub-date" class="w-full p-2 border rounded font-semibold text-gray-700" onchange="window.updateBatchDate()">
+                            </div>
+                            <div class="w-full md:w-1/3">
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Asal HUB</label>
+                                <select id="hub-origin" class="w-full p-2 border rounded hubs-select font-semibold text-gray-700 bg-white"></select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <!-- Input Form -->
+                            <div class="lg:col-span-1 bg-white rounded-xl shadow-lg p-6 h-fit sticky top-6">
+                                <h3 class="font-bold text-lg mb-4 text-purple-700 border-b pb-2"><i class="fas fa-barcode mr-2"></i>Input Paket</h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="text-xs font-bold text-gray-500">No. AWB / Resi</label>
+                                        <input type="text" id="hub-awb" placeholder="Scan atau Input..." class="w-full p-3 border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 font-mono font-bold text-lg" onkeydown="if(event.key === 'Enter') window.addToTempHub()">
+                                        <p class="text-xs text-gray-400 mt-1">*Tekan Enter untuk tambah</p>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs font-bold text-gray-500">Remarks HUB</label>
+                                        <select id="hub-remark" class="w-full p-2 border rounded remarks-select" onchange="window.toggleCiriInput()"></select>
+                                    </div>
+                                    <div id="hub-ciri-container" class="hidden animate-fade-in">
+                                        <label class="text-xs font-bold text-gray-500">Ciri-ciri Parcel</label>
+                                        <input type="text" id="hub-ciri" placeholder="Warna, Bentuk, dll..." class="w-full p-2 border rounded bg-yellow-50">
+                                    </div>
+                                    <button onclick="window.addToTempHub()" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-bold shadow-lg mt-2">
+                                        <i class="fas fa-plus mr-2"></i>Tambah ke Daftar
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Temporary Table & Actions -->
+                            <div class="lg:col-span-2 space-y-4">
+                                <div class="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col min-h-[400px]">
+                                    <div class="p-4 border-b bg-purple-50 flex justify-between items-center">
+                                        <h3 class="font-bold text-purple-800">Daftar Paket Sementara</h3>
+                                        <div class="flex items-center gap-2">
+                                            <button onclick="window.openHistoryModal()" class="text-xs bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700 font-bold transition">
+                                                <i class="fas fa-history mr-1"></i>Riwayat
+                                            </button>
+                                            <button onclick="window.loadDraftsFromDB()" class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 font-bold transition">
+                                                <i class="fas fa-cloud-download-alt mr-1"></i>Ambil Draft
+                                            </button>
+                                            <span id="temp-count" class="bg-purple-200 text-purple-800 px-3 py-1 rounded-full text-xs font-bold">0 Item</span>
+                                        </div>
+                                    </div>
+                                    <div class="overflow-auto flex-grow">
+                                        <table class="w-full text-left text-sm">
+                                            <thead class="bg-gray-100 text-xs uppercase">
+                                                <tr>
+                                                    <th class="p-3">No</th>
+                                                    <th class="p-3">AWB</th>
+                                                    <th class="p-3">Remarks</th>
+                                                    <th class="p-3">Ciri-ciri</th>
+                                                    <th class="p-3 text-right">Aksi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="hub-temp-body" class="divide-y divide-gray-100">
+                                                <tr><td colspan="5" class="text-center p-8 text-gray-400">Belum ada data di sesi ini</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-4">
+                                    <button onclick="window.saveDraftHub()" class="bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-xl font-bold shadow transition">
+                                        <i class="fas fa-save mr-2"></i>Simpan Draft
+                                    </button>
+                                    <button onclick="window.submitHubData()" class="bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold shadow-lg transition transform hover:-translate-y-1">
+                                        <i class="fas fa-paper-plane mr-2"></i>Submit & Cetak
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
             
-            // Global Settings State
-            const [remarksList, setRemarksList] = useState(['Rusak', 'Salah Rute', 'Retur', 'Tanpa AWB', 'Packing Ulang']);
-            const [hubSenders, setHubSenders] = useState([]); // List Pengirim
+            // Initial Loaders
+            loadUsers();
+            loadHubs();
+            loadRemarks();
+            loadPackages();
+            
+            // Set date to today
+            document.getElementById('hub-date').valueAsDate = new Date();
+            
+            // Init admin view state
+            window.switchAdminView('users');
+        }
 
-            const [packages, setPackages] = useState([]);
-            const [handovers, setHandovers] = useState([]);
-            const [loading, setLoading] = useState(true);
+        window.renderUserDashboard = function(userData) {
+            currentUserData = userData;
+            if (userData.role === 'HUB' || userData.role === 'admin') {
+                renderAdminDashboard(); 
+                if(userData.role !== 'admin') {
+                    document.getElementById('nav-users').classList.add('hidden');
+                    document.getElementById('nav-data').classList.add('hidden');
+                    window.switchAdminView('hub');
+                } else {
+                    window.switchAdminView('users');
+                }
+            } else {
+                container.innerHTML = `
+                     <div class="glass-panel w-full max-w-lg p-8 rounded-2xl shadow-2xl animate-fade-in text-center">
+                        <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl text-blue-600">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                        <h1 class="text-2xl font-bold text-gray-800">Halo, ${userData.fullname || userData.username}</h1>
+                        <p class="text-gray-500 mb-6 font-semibold">${userData.role}</p>
+                        ${userData.role === 'HD' ? `<button onclick="window.renderAdminDashboard(); setTimeout(() => window.switchAdminView('data'), 100);" class="mb-4 w-full bg-blue-600 text-white py-2 rounded-lg font-bold">Lihat Data Paket</button>` : ''}
+                        <button onclick="window.logout()" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 rounded-lg transition shadow">Logout</button>
+                    </div>
+                `;
+            }
+        }
 
-            // Init & Fetch Data
-            useEffect(() => {
-                const initSystem = async () => {
-                    await signInAnonymously(auth);
-                    const savedUser = localStorage.getItem('app_user');
-                    if (savedUser) {
-                        setCurrentUser(JSON.parse(savedUser));
-                    }
-                    setLoading(false);
-                };
-                initSystem();
-            }, []);
+        // --- NAVIGATION ---
+        window.switchTab = (tab) => { 
+            const btnUser = document.getElementById('tab-user');
+            const btnAdmin = document.getElementById('tab-admin');
+            const formUser = document.getElementById('form-user');
+            const formAdmin = document.getElementById('form-admin');
+            if (tab === 'user') {
+                btnUser.className = "flex-1 py-2 rounded-md text-sm font-bold bg-white shadow text-blue-600 transition-all";
+                btnAdmin.className = "flex-1 py-2 rounded-md text-sm font-bold text-gray-500 hover:text-gray-700 transition-all";
+                formUser.classList.remove('hidden'); formAdmin.classList.add('hidden');
+            } else {
+                btnAdmin.className = "flex-1 py-2 rounded-md text-sm font-bold bg-white shadow text-gray-800 transition-all";
+                btnUser.className = "flex-1 py-2 rounded-md text-sm font-bold text-gray-500 hover:text-gray-700 transition-all";
+                formAdmin.classList.remove('hidden'); formUser.classList.add('hidden');
+            }
+        };
 
-            // Realtime Listeners
-            useEffect(() => {
-                if (!currentUser) return;
+        window.switchAdminView = (view) => {
+            currentAdminView = view;
+            document.getElementById('view-users').classList.toggle('hidden', view !== 'users');
+            document.getElementById('view-data').classList.toggle('hidden', view !== 'data');
+            document.getElementById('view-hub').classList.toggle('hidden', view !== 'hub');
+            
+            ['users', 'data', 'hub'].forEach(v => {
+                const btn = document.getElementById(`nav-${v}`);
+                if(btn) {
+                    if (v === view) btn.className = "px-4 py-2 rounded-md font-bold text-sm transition-all whitespace-nowrap bg-white shadow text-blue-600";
+                    else btn.className = "px-4 py-2 rounded-md font-bold text-sm transition-all whitespace-nowrap text-gray-500 hover:text-gray-700";
+                }
+            });
+            
+            if(view === 'data' || view === 'hub') updateSelects();
+            if(view === 'hub') document.getElementById('hub-awb').focus();
+        };
 
-                const qPackages = query(collection(db, 'artifacts', APP_ID, 'public', 'data', 'packages'), orderBy('created_at', 'desc'));
-                const unsubPackages = onSnapshot(qPackages, (snap) => {
-                    setPackages(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-                });
+        // --- AUTH ---
+        window.handleAdminLogin = async () => {
+            const pass = document.getElementById('admin-pass').value;
+            const docSnap = await getDoc(ADMIN_CONFIG_DOC);
+            const realPass = docSnap.exists() ? docSnap.data().password : "123";
+            if (pass === realPass) { 
+                currentUserData = { username: 'admin', fullname: 'Administrator', role: 'admin' };
+                renderAdminDashboard(); showToast("Login Admin Berhasil", "success"); 
+            } else { showToast("Password Salah", "error"); }
+        };
 
-                const qHandovers = query(collection(db, 'artifacts', APP_ID, 'public', 'data', 'handovers'), orderBy('timestamp', 'desc'));
-                const unsubHandovers = onSnapshot(qHandovers, (snap) => {
-                    setHandovers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-                });
+        window.handleUserLogin = async () => {
+            const uid = document.getElementById('user-id').value;
+            const upass = document.getElementById('user-pass').value;
+            const q = query(USERS_COLLECTION, where("username", "==", uid), where("password", "==", upass));
+            const snap = await getDocs(q);
+            if (!snap.empty) { 
+                const userData = snap.docs[0].data();
+                userData.id = snap.docs[0].id; 
+                renderUserDashboard(userData); showToast("Login Berhasil", "success"); 
+            } else { showToast("ID/Password Salah", "error"); }
+        };
 
-                const docSettings = doc(db, 'artifacts', APP_ID, 'public', 'data', 'settings', 'config');
-                const unsubSettings = onSnapshot(docSettings, (doc) => {
-                    if (doc.exists()) {
-                        const data = doc.data();
-                        setRemarksList(data.hub_remarks || []);
-                        setHubSenders(data.hub_senders || []);
-                    }
-                });
+        window.logout = () => { currentUserData = null; localDraft = []; currentBatchId = null; renderLoginScreen(); showToast("Logout Berhasil"); };
 
-                return () => {
-                    unsubPackages();
-                    unsubHandovers();
-                    unsubSettings();
-                };
-            }, [currentUser]);
+        // --- HUB OPERATIONS LOGIC ---
+        
+        window.toggleCiriInput = () => {
+            const val = document.getElementById('hub-remark').value;
+            const ciriContainer = document.getElementById('hub-ciri-container');
+            if(val && val.toLowerCase().includes('tanpa awb')) {
+                ciriContainer.classList.remove('hidden');
+            } else {
+                ciriContainer.classList.add('hidden');
+                document.getElementById('hub-ciri').value = "";
+            }
+        };
 
-            const showToast = (message, type = 'success') => {
-                setToast({ message, type });
-                setTimeout(() => setToast(null), 3000);
-            };
+        window.updateBatchDate = () => {
+            // Regenerate ID if date changes and batch is new
+            if (localDraft.length === 0) {
+                // Do nothing, ID will generate on first add
+                currentBatchId = null;
+                document.getElementById('display-handover-id').innerText = "-";
+            } else {
+                showToast("Tanggal diubah. No. Serah Terima akan menyesuaikan saat simpan.", "info");
+            }
+        };
 
-            const handleLogout = () => {
-                localStorage.removeItem('app_user');
-                setCurrentUser(null);
-                setActiveTab('dashboard');
-            };
-
-            if (loading) return <div className="h-screen flex items-center justify-center text-slate-500">Memuat Sistem...</div>;
-
-            if (!currentUser) {
-                return <LoginView onLogin={(user) => {
-                    setCurrentUser(user);
-                    localStorage.setItem('app_user', JSON.stringify(user));
-                    showToast(`Selamat datang, ${user.name}`);
-                }} showToast={showToast} />;
+        // --- ADD TO TEMP ---
+        window.addToTempHub = () => {
+            // 1. Get Batch Info from Header
+            const hubDate = document.getElementById('hub-date').value;
+            const hubOrigin = document.getElementById('hub-origin').value;
+            
+            if(!hubDate || !hubOrigin) {
+                return showToast("Mohon lengkapi Tanggal dan Asal HUB di bagian atas", "error");
             }
 
-            return (
-                <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
-                    <Sidebar 
-                        role={currentUser.role} 
-                        name={currentUser.name} 
-                        activeTab={activeTab} 
-                        setActiveTab={setActiveTab} 
-                        onLogout={handleLogout} 
-                    />
+            // 2. Get Item Info
+            const awbInput = document.getElementById('hub-awb');
+            const awb = awbInput.value.trim();
+            const remark = document.getElementById('hub-remark').value;
+            const ciri = document.getElementById('hub-ciri').value;
+            
+            if(!awb && (!remark || !remark.toLowerCase().includes('tanpa awb'))) {
+                return showToast("Scan AWB atau pilih 'Tanpa AWB'", "error");
+            }
 
-                    <main className="flex-1 p-4 md:p-8 overflow-y-auto max-h-screen no-scrollbar">
-                        <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
-                                <h2 className="text-2xl font-bold text-slate-800 capitalize">{activeTab.replace('-', ' ')}</h2>
-                                <p className="text-slate-500 text-sm">Sistem Validasi Handover HUB & HD</p>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-slate-500 bg-white px-4 py-2 rounded-lg border border-slate-200">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                Sistem Online
-                            </div>
-                        </header>
+            const isNoAwb = remark && remark.toLowerCase().includes('tanpa awb');
 
-                        {activeTab === 'dashboard' && <DashboardView packages={packages} handovers={handovers} />}
-                        {/* Kirim hubSenders ke HubInputView */}
-                        {activeTab === 'hub-input' && <HubInputView remarks={remarksList} senders={hubSenders} showToast={showToast} currentUser={currentUser} handovers={handovers} />}
-                        {activeTab === 'hd-input' && <HdInputView packages={packages} showToast={showToast} currentUser={currentUser} />}
-                        {/* Kirim packages ke DataHandoverView untuk tab detail */}
-                        {activeTab === 'data-handover' && <DataHandoverView handovers={handovers} packages={packages} />}
-                        {activeTab === 'settings' && <SettingsView remarks={remarksList} senders={hubSenders} showToast={showToast} />}
-                    </main>
+            // 3. Duplicate Check
+            if (!isNoAwb && localDraft.some(item => item.awb === awb)) {
+                showToast(`AWB ${awb} sudah ada di daftar!`, "error");
+                awbInput.value = ""; 
+                awbInput.focus(); 
+                return; 
+            }
 
-                    {toast && <Toast {...toast} onClose={() => setToast(null)} />}
-                </div>
-            );
-        }
+            // 4. Generate Batch ID if needed
+            if (!currentBatchId) {
+                currentBatchId = generateHandoverId(hubDate);
+                document.getElementById('display-handover-id').innerText = currentBatchId + " (Draft)";
+            }
 
-        // --- LOGIN VIEW ---
-        function LoginView({ onLogin, showToast }) {
-            const [username, setUsername] = useState("");
-            const [password, setPassword] = useState("");
-            const [isChecking, setIsChecking] = useState(false);
-
-            const handleSubmit = async (e) => {
-                e.preventDefault();
-                setIsChecking(true);
-
-                try {
-                    const usersRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'users');
-                    const q = query(usersRef);
-                    const snapshot = await getDocs(q);
-
-                    if (snapshot.empty) {
-                        if (username === 'admin' && password === 'admin') {
-                            const defaultUser = { username: 'admin', password: 'admin', role: 'admin', name: 'Super Admin', created_at: serverTimestamp() };
-                            await addDoc(usersRef, defaultUser);
-                            onLogin({ ...defaultUser, id: 'init_admin' });
-                            return;
-                        } else {
-                            showToast("Database kosong. Gunakan user: admin, pass: admin", "error");
-                            setIsChecking(false);
-                            return;
-                        }
-                    }
-
-                    const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    const foundUser = users.find(u => u.username === username && u.password === password);
-
-                    if (foundUser) {
-                        onLogin(foundUser);
-                    } else {
-                        showToast("Username atau Password salah", "error");
-                    }
-
-                } catch (err) {
-                    console.error(err);
-                    showToast("Terjadi kesalahan koneksi", "error");
-                } finally {
-                    setIsChecking(false);
-                }
+            const newItem = {
+                id: Date.now().toString(),
+                awb: awb || "NO-AWB",
+                remark: remark || "-",
+                ciri: ciri || "-",
+                picInput: currentUserData.username,
+                // These are now implicit from header, but we store them for saving
+                hubOrigin: hubOrigin, 
+                date: hubDate,
+                handoverId: currentBatchId, 
+                timestamp: new Date()
             };
 
-            return (
-                <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-                    <div className="max-w-md w-full bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-2xl">
-                        <div className="text-center mb-8">
-                            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-blue-500/20">
-                                <Icon name="package-search" size={32} className="text-white" />
-                            </div>
-                            <h1 className="text-2xl font-bold text-white">VAL-PAKET Login</h1>
-                            <p className="text-slate-400 mt-2 text-sm">Masukkan kredensial Anda</p>
-                        </div>
-
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div>
-                                <label className="text-slate-400 text-sm font-medium mb-1 block">Username</label>
-                                <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Masukkan username" required />
-                            </div>
-                            <div>
-                                <label className="text-slate-400 text-sm font-medium mb-1 block">Password</label>
-                                <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Masukkan password" required />
-                            </div>
-                            <Button type="submit" className="w-full py-3 mt-4" disabled={isChecking}>{isChecking ? "Memeriksa..." : "Masuk Sistem"}</Button>
-                        </form>
-                    </div>
-                </div>
-            );
-        }
-
-        // --- COMPONENT: SIDEBAR ---
-        function Sidebar({ role, name, activeTab, setActiveTab, onLogout }) {
-            const NavItem = ({ icon, label, id, visible }) => {
-                if (!visible) return null;
-                return (
-                    <button 
-                        onClick={() => setActiveTab(id)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium w-full text-left ${
-                            activeTab === id
-                                ? "bg-blue-600 text-white shadow-lg shadow-blue-900/20" 
-                                : "text-slate-400 hover:text-white hover:bg-slate-800"
-                        }`}
-                    >
-                        <Icon name={icon} size={20}/>
-                        <span>{label}</span>
-                    </button>
-                );
-            };
-
-            return (
-                <aside className="w-full md:w-64 bg-slate-900 text-white flex flex-col no-print">
-                    <div className="p-6 border-b border-slate-800">
-                        <h1 className="text-xl font-bold flex items-center gap-2">
-                            <Icon name="package-search" className="text-blue-400" />
-                            VAL-PAKET
-                        </h1>
-                    </div>
-                    
-                    <nav className="flex-1 p-4 flex flex-col gap-2">
-                        <NavItem icon="layout-dashboard" label="Dashboard" id="dashboard" visible={true} />
-                        <NavItem icon="plus" label="Input HUB" id="hub-input" visible={role === 'admin' || role === 'hub'} />
-                        <NavItem icon="truck" label="Input HD" id="hd-input" visible={role === 'admin' || role === 'hd'} />
-                        {/* UPDATE: Ganti label menu */}
-                        <NavItem icon="file-text" label="Data Handover" id="data-handover" visible={true} />
-                        <NavItem icon="settings" label="Pengaturan" id="settings" visible={role === 'admin'} />
-                    </nav>
-
-                    <div className="p-4 border-t border-slate-800">
-                        <div className="flex items-center gap-3 mb-4 px-2">
-                            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-xs font-bold uppercase">
-                                {role[0]}
-                            </div>
-                            <div className="overflow-hidden">
-                                <p className="text-sm font-medium truncate">{name}</p>
-                                <p className="text-xs text-slate-400 capitalize">{role}</p>
-                            </div>
-                        </div>
-                        <button onClick={onLogout} className="w-full flex items-center gap-2 px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all">
-                            <Icon name="log-out" size={18} /> <span>Keluar</span>
-                        </button>
-                    </div>
-                </aside>
-            );
-        }
-
-        // --- COMPONENT: DASHBOARD ---
-        function DashboardView({ packages }) {
-            const stats = useMemo(() => ({
-                total: packages.length,
-                diHd: packages.filter(p => p.status_paket === 'Di HD').length,
-                kembali: packages.filter(p => p.status_paket === 'Kembali ke HUB').length,
-                anomali: packages.filter(p => p.status_paket === 'Anomali HD').length,
-            }), [packages]);
-
-            const StatCard = ({ title, value, icon, color }) => {
-                const bgColors = { blue: "bg-blue-50", amber: "bg-amber-50", emerald: "bg-emerald-50", red: "bg-red-50" };
-                const textColors = { blue: "text-blue-500", amber: "text-amber-500", emerald: "text-emerald-500", red: "text-red-500" };
-                return (
-                    <Card className="p-6 flex items-center justify-between">
-                        <div>
-                            <p className="text-sm font-medium text-slate-500 mb-1">{title}</p>
-                            <p className="text-3xl font-bold text-slate-800">{value}</p>
-                        </div>
-                        <div className={`p-4 rounded-xl ${bgColors[color]}`}>
-                            <Icon name={icon} className={textColors[color]} size={24} />
-                        </div>
-                    </Card>
-                );
-            };
-
-            const StatusBadge = ({ status }) => {
-                const styles = {
-                    "Di HD": "bg-amber-100 text-amber-700 border-amber-200",
-                    "Kembali ke HUB": "bg-emerald-100 text-emerald-700 border-emerald-200",
-                    "Anomali HD": "bg-red-100 text-red-700 border-red-200",
-                    "Cek Kembali": "bg-slate-100 text-slate-700 border-slate-200"
-                };
-                return <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase border ${styles[status]}`}>{status}</span>;
-            };
-
-            return (
-                <div className="space-y-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <StatCard title="Total Paket" value={stats.total} icon="package-search" color="blue" />
-                        <StatCard title="Ada di HD" value={stats.diHd} icon="truck" color="amber" />
-                        <StatCard title="Sudah Kembali" value={stats.kembali} icon="check-circle-2" color="emerald" />
-                        <StatCard title="Anomali / Tanpa AWB" value={stats.anomali} icon="alert-circle" color="red" />
-                    </div>
-
-                    <Card className="overflow-hidden">
-                        <div className="p-4 border-b border-slate-100 font-bold text-slate-700">Aktivitas Paket Terbaru</div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-50 text-slate-500 uppercase text-xs font-semibold">
-                                    <tr>
-                                        <th className="px-6 py-4">AWB / Keterangan</th>
-                                        <th className="px-6 py-4">Status</th>
-                                        <th className="px-6 py-4">Tgl Kirim</th>
-                                        <th className="px-6 py-4">Remarks HUB</th>
-                                        <th className="px-6 py-4">Sender</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {packages.slice(0, 10).map((p) => (
-                                        <tr key={p.id} className="hover:bg-slate-50/50">
-                                            <td className="px-6 py-4 font-mono font-medium text-slate-700">
-                                                {p.awb || <span className="text-slate-400 italic">Non-AWB: {p.keterangan_fisik}</span>}
-                                            </td>
-                                            <td className="px-6 py-4"><StatusBadge status={p.status_paket} /></td>
-                                            <td className="px-6 py-4 text-slate-500">
-                                                {p.tanggal_kirim?.toDate?.().toLocaleDateString('id-ID')}
-                                            </td>
-                                            <td className="px-6 py-4"><span className="bg-slate-100 px-2 py-1 rounded text-xs">{p.remarks_hub}</span></td>
-                                            <td className="px-6 py-4 text-slate-500">{p.pengirim_hub}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            {packages.length === 0 && <div className="p-10 text-center text-slate-400">Belum ada data paket.</div>}
-                        </div>
-                    </Card>
-                </div>
-            );
-        }
-
-        // --- COMPONENT: HUB INPUT ---
-        const ConfirmModal = ({ isOpen, data, onClose }) => {
-            if (!isOpen) return null;
-            return (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4 animate-in fade-in zoom-in duration-200">
-                    <Card className="w-full max-w-sm p-6 shadow-2xl border-0">
-                        <div className="flex flex-col items-center text-center gap-4">
-                            <div className={`p-4 rounded-full ${data.type === 'danger' ? 'bg-red-100 text-red-600' : data.type === 'success' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}`}>
-                                <Icon name={data.type === 'danger' ? 'alert-triangle' : data.type === 'success' ? 'check' : 'info'} size={32} />
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-lg text-slate-800">{data.title}</h3>
-                                <p className="text-slate-500 text-sm mt-1">{data.message}</p>
-                            </div>
-                            <div className="flex gap-3 w-full mt-2">
-                                <Button variant="secondary" onClick={onClose} className="flex-1">{data.cancelLabel || "Batal"}</Button>
-                                <Button variant={data.type === 'danger' ? 'danger' : 'primary'} onClick={data.onConfirm} className="flex-1">{data.confirmLabel || "Ya, Lanjutkan"}</Button>
-                            </div>
-                        </div>
-                    </Card>
-                </div>
-            );
+            localDraft.push(newItem);
+            renderTempTable();
+            
+            // Reset input
+            document.getElementById('hub-awb').value = "";
+            document.getElementById('hub-ciri').value = "";
+            document.getElementById('hub-awb').focus();
         };
 
-        const SuratJalanPrintModal = ({ data, onClose }) => {
-            if (!data) return null;
+        function renderTempTable() {
+            const tbody = document.getElementById('hub-temp-body');
+            document.getElementById('temp-count').innerText = `${localDraft.length} Item`;
+            
+            if(localDraft.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center p-8 text-gray-400">Belum ada data di sesi ini</td></tr>`;
+                return;
+            }
 
-            useEffect(() => {
-                const timer = setTimeout(() => { window.print(); }, 500); 
-                return () => clearTimeout(timer);
-            }, []);
+            let html = '';
+            [...localDraft].reverse().forEach((item, index) => {
+                const actualIndex = localDraft.length - 1 - index;
+                // Only show relevant info since Date/Hub is in header
+                html += `
+                    <tr class="hover:bg-purple-50 border-b border-gray-100">
+                        <td class="p-3 text-center">${actualIndex + 1}</td>
+                        <td class="p-3 font-mono font-bold">${item.awb}</td>
+                        <td class="p-3 text-xs">${item.remark}</td>
+                        <td class="p-3 text-xs italic text-gray-500">${item.ciri}</td>
+                        <td class="p-3 text-right">
+                            <button onclick="window.removeTempItem(${actualIndex})" class="text-red-500 hover:text-red-700 px-2"><i class="fas fa-times"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
 
-            const getRowData = (item) => {
-                if (typeof item === 'string') {
-                    if (item.startsWith("Non-AWB:")) {
-                        return { awb: "-", remarks: "Tanpa AWB", description: item.replace("Non-AWB:", "").trim() };
-                    }
-                    return { awb: item, remarks: "-", description: "-" };
-                }
-                return { awb: item.awb || "-", remarks: item.remarks || "-", description: item.description || "-" };
-            };
-
-            return (
-                <div className="fixed inset-0 z-[80] bg-slate-900/50 flex items-center justify-center p-4 overflow-y-auto">
-                    <style>{`
-                        @media print {
-                            @page { size: landscape; margin: 0.5cm; }
-                            body { visibility: hidden; }
-                            .print-modal-content { visibility: visible; position: absolute; left: 0; top: 0; width: 100% !important; max-width: none !important; margin: 0 !important; padding: 20px !important; box-shadow: none !important; border: none !important; }
-                            .print-modal-content * { visibility: visible; }
-                            .no-print { display: none !important; }
-                        }
-                    `}</style>
-                    <Card className="max-w-[90%] w-full p-8 bg-white relative my-8 print-modal-content">
-                        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 no-print"><Icon name="x" size={24} /></button>
-                        <div className="p-4 space-y-6">
-                            <div className="flex justify-between items-start border-b-4 border-slate-800 pb-4 mb-6">
-                                <div><h2 className="text-3xl font-black uppercase tracking-wider text-slate-800">FORM SERAH TERIMA</h2></div>
-                                <div className="text-right"><p className="font-mono text-xl font-bold text-slate-800">{data.id}</p><p className="text-xs text-slate-500 italic mt-1">Dicetak: {new Date().toLocaleString('id-ID')}</p></div>
-                            </div>
-                            <div className="flex justify-between bg-slate-50 p-4 rounded-lg border border-slate-200">
-                                <div><table className="text-sm"><tbody><tr><td className="pr-4 py-1 text-slate-500 font-medium">Dari:</td><td className="font-bold uppercase">{data.sender}</td></tr><tr><td className="pr-4 py-1 text-slate-500 font-medium">Tipe:</td><td className="font-bold uppercase">{data.type}</td></tr></tbody></table></div>
-                                <div className="text-right"><p className="text-xs font-bold text-slate-500 uppercase">Total Muatan</p><p className="text-3xl font-black text-slate-800">{data.total_items} <span className="text-sm font-medium text-slate-500">Item</span></p></div>
-                            </div>
-                            <div className="mt-6">
-                                <h3 className="font-bold text-slate-800 mb-2 uppercase text-xs tracking-wider border-l-4 border-blue-600 pl-2">Rincian Paket</h3>
-                                <table className="w-full text-left text-sm border-collapse border border-slate-300">
-                                    <thead className="bg-slate-100 text-slate-700 text-xs uppercase font-bold text-center"><tr><th className="border border-slate-300 px-2 py-2 w-12">No</th><th className="border border-slate-300 px-2 py-2">Resi (AWB)</th><th className="border border-slate-300 px-2 py-2">Remarks</th><th className="border border-slate-300 px-2 py-2">Ciri-ciri Fisik / Ket</th></tr></thead>
-                                    <tbody className="text-slate-700">
-                                        {data.items?.map((itemRaw, i) => {
-                                            const item = getRowData(itemRaw);
-                                            return (<tr key={i} className="even:bg-slate-50"><td className="border border-slate-300 px-2 py-1.5 text-center">{i + 1}</td><td className="border border-slate-300 px-2 py-1.5 font-mono font-medium">{item.awb}</td><td className="border border-slate-300 px-2 py-1.5 text-center">{item.remarks}</td><td className="border border-slate-300 px-2 py-1.5">{item.description}</td></tr>);
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div className="grid grid-cols-3 gap-8 pt-16 mt-8">
-                                <div className="text-center"><p className="text-xs mb-16 font-medium uppercase">Dibuat Oleh,</p><p className="font-bold underline uppercase">{data.sender}</p></div>
-                                <div className="text-center"><p className="text-xs mb-16 font-medium uppercase">Driver / Kurir,</p><p className="font-bold border-b border-slate-800 inline-block min-w-[120px]">&nbsp;</p></div>
-                                <div className="text-center"><p className="text-xs mb-16 font-medium uppercase">Diterima Oleh,</p><p className="font-bold border-b border-slate-800 inline-block min-w-[120px]">&nbsp;</p></div>
-                            </div>
-                        </div>
-                        <div className="mt-8 pt-4 border-t border-slate-200 flex justify-end gap-3 no-print">
-                            <Button onClick={() => window.print()} variant="primary" className="bg-slate-800 hover:bg-slate-900"><Icon name="printer" size={18} /> Cetak Ulang</Button>
-                            <Button onClick={onClose} variant="secondary">Tutup</Button>
-                        </div>
-                    </Card>
-                </div>
-            );
+        window.removeTempItem = (index) => {
+            localDraft.splice(index, 1);
+            if(localDraft.length === 0) {
+                currentBatchId = null;
+                document.getElementById('display-handover-id').innerText = "-";
+            }
+            renderTempTable();
         };
 
-        function HubInputView({ remarks, senders, showToast, currentUser, handovers }) {
-            const [scannedList, setScannedList] = useState([]);
-            const [currentAwb, setCurrentAwb] = useState("");
-            const [currentRemark, setCurrentRemark] = useState(remarks[0]);
-            const [currentKeterangan, setCurrentKeterangan] = useState("");
-            const [isSubmitting, setIsSubmitting] = useState(false);
-            const [confirmState, setConfirmState] = useState({ isOpen: false, title: "", message: "", type: "info", confirmLabel: "", cancelLabel: "", onConfirm: () => {} });
-            const [editState, setEditState] = useState({ isOpen: false, item: null, form: { awb: "", remarks_hub: "", keterangan_fisik: "" } });
-            const [printData, setPrintData] = useState(null);
-
-            // UPDATE: State Pengirim (default ke current user, tapi bisa diubah)
-            const [selectedSender, setSelectedSender] = useState(currentUser.name);
-
-            const generatedHandoverId = useMemo(() => {
-                const today = new Date();
-                const dd = String(today.getDate()).padStart(2, '0');
-                const mm = String(today.getMonth() + 1).padStart(2, '0');
-                const yyyy = today.getFullYear();
-                const datePrefix = `${dd}${mm}${yyyy}`;
-                const countToday = handovers.filter(h => h.id.startsWith(datePrefix)).length;
-                const nextSequence = String(countToday + 1).padStart(4, '0');
-                return `${datePrefix}-${nextSequence}`;
-            }, [handovers]);
-
-            const currentDateStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-
-            const addPackageToList = (e) => {
-                e.preventDefault();
-                if (!currentAwb && !currentKeterangan) return;
+        window.loadDraftsFromDB = async () => {
+            try {
+                const snap = await getDocs(DRAFTS_COLLECTION);
+                if (snap.empty) return showToast("Tidak ada draft tersimpan", "info");
                 
-                if (currentAwb && scannedList.some(i => i.awb === currentAwb)) {
-                    showToast("AWB ini sudah ada dalam daftar sementara", "error");
-                    return;
+                let addedCount = 0;
+                let firstLoaded = null;
+
+                snap.forEach(doc => {
+                    const data = doc.data();
+                    const isNoAwb = data.remark && data.remark.toLowerCase().includes('tanpa awb');
+
+                    if (!isNoAwb && localDraft.some(l => l.awb === data.awb)) return;
+
+                    const item = { ...data, draftId: doc.id };
+                    localDraft.push(item);
+                    if(!firstLoaded) firstLoaded = item;
+                    addedCount++;
+                });
+
+                if(firstLoaded) {
+                    // Restore Header Info from Draft
+                    document.getElementById('hub-date').value = firstLoaded.date;
+                    document.getElementById('hub-origin').value = firstLoaded.hubOrigin;
+                    currentBatchId = firstLoaded.handoverId;
+                    document.getElementById('display-handover-id').innerText = currentBatchId + " (Loaded)";
                 }
 
-                const newItem = {
-                    temp_id: Math.random().toString(36).substr(2, 9),
-                    awb: currentAwb.trim(),
-                    remarks_hub: currentRemark,
-                    keterangan_fisik: currentKeterangan,
-                    status_paket: "Di HD",
-                    tanggal_kirim: new Date(),
-                    pengirim_hub: selectedSender // UPDATE: Menggunakan pengirim yang dipilih
-                };
+                renderTempTable();
+                if (addedCount > 0) showToast(`${addedCount} Draft diambil`, "success");
+            } catch(e) { showToast("Error: " + e.message, "error"); }
+        };
 
-                setScannedList([newItem, ...scannedList]);
-                setCurrentAwb("");
-                setCurrentKeterangan("");
-            };
+        window.saveDraftHub = async () => {
+            if(localDraft.length === 0) return showToast("Daftar kosong", "error");
+            
+            // Get Header Values to ensure consistency
+            const hubDate = document.getElementById('hub-date').value;
+            const hubOrigin = document.getElementById('hub-origin').value;
 
-            const triggerDelete = (id) => {
-                setConfirmState({
-                    isOpen: true,
-                    title: "Hapus Item?",
-                    message: "Item ini akan dihapus dari daftar antrian handover. Lanjutkan?",
-                    type: "danger",
-                    confirmLabel: "Hapus",
-                    onConfirm: () => {
-                        setScannedList(prev => prev.filter(i => i.temp_id !== id));
-                        setConfirmState(prev => ({ ...prev, isOpen: false }));
-                        showToast("Item berhasil dihapus");
-                    }
+            try {
+                const batch = writeBatch(db);
+                localDraft.forEach(item => {
+                    // Update item with current header values
+                    item.date = hubDate;
+                    item.hubOrigin = hubOrigin;
+                    item.handoverId = currentBatchId;
+
+                    const docRef = item.draftId ? doc(DRAFTS_COLLECTION, item.draftId) : doc(DRAFTS_COLLECTION);
+                    batch.set(docRef, {
+                        ...item,
+                        savedBy: currentUserData.username,
+                        lastUpdated: new Date()
+                    });
                 });
-            };
+                await batch.commit();
+                showToast("Draft berhasil disimpan", "success");
+                localDraft = []; 
+                currentBatchId = null;
+                document.getElementById('display-handover-id').innerText = "-";
+                renderTempTable();
+            } catch(e) { showToast("Gagal simpan: " + e.message, "error"); }
+        };
 
-            const triggerEdit = (item) => {
-                setConfirmState({
-                    isOpen: true,
-                    title: "Edit Item?",
-                    message: "Anda akan mengubah data item ini. Lanjutkan?",
-                    type: "info",
-                    onConfirm: () => {
-                        setEditState({
-                            isOpen: true,
-                            item: item,
-                            form: { awb: item.awb, remarks_hub: item.remarks_hub, keterangan_fisik: item.keterangan_fisik || "" }
-                        });
-                        setConfirmState(prev => ({ ...prev, isOpen: false }));
-                    }
-                });
-            };
+        // --- SUBMIT ---
+        window.submitHubData = async () => {
+            if(localDraft.length === 0) return showToast("Tidak ada data", "error");
+            
+            // Menggunakan Custom Confirm
+            const isConfirmed = await window.showConfirm("Yakin ingin submit dan cetak serah terima? Data akan masuk ke database utama.");
+            if(!isConfirmed) return;
 
-            const saveEdit = () => {
-                setScannedList(prev => prev.map(p => {
-                    if (p.temp_id === editState.item.temp_id) {
-                        return { ...p, ...editState.form };
-                    }
-                    return p;
+            // Ensure current header values are used
+            const hubDate = document.getElementById('hub-date').value;
+            const hubOrigin = document.getElementById('hub-origin').value;
+            
+            if(!currentBatchId) currentBatchId = generateHandoverId(hubDate);
+
+            try {
+                const batch = writeBatch(db);
+                
+                // 1. Handover Doc
+                const handoverRef = doc(HANDOVERS_COLLECTION);
+                
+                // Update all items with final header values
+                const finalItems = localDraft.map(item => ({
+                    ...item,
+                    date: hubDate,
+                    hubOrigin: hubOrigin,
+                    handoverId: currentBatchId,
+                    picHub: currentUserData.username
                 }));
-                setEditState({ isOpen: false, item: null, form: {} });
-                showToast("Data berhasil diperbarui");
-            };
 
-            const submitHandover = async () => {
-                if (scannedList.length === 0) return;
-                setIsSubmitting(true);
-                
-                try {
-                    const batch = writeBatch(db);
-                    const handoverId = generatedHandoverId;
-                    const handoverRef = doc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'handovers'), handoverId);
-                    
-                    const detailedItems = scannedList.map(i => ({
-                        awb: i.awb || "-",
-                        remarks: i.remarks_hub || "-",
-                        description: i.keterangan_fisik || "-"
-                    }));
-
-                    const handoverData = {
-                        id: handoverId,
-                        type: 'HUB-HD',
-                        sender: selectedSender, // UPDATE: Gunakan selectedSender
-                        total_items: scannedList.length,
-                        timestamp: { toDate: () => new Date() },
-                        items: detailedItems
-                    };
-
-                    batch.set(handoverRef, {
-                        ...handoverData,
-                        timestamp: serverTimestamp()
-                    });
-
-                    scannedList.forEach(item => {
-                        const pkgRef = doc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'packages'));
-                        const { temp_id, ...dataToSave } = item;
-                        batch.set(pkgRef, {
-                            ...dataToSave,
-                            handover_id: handoverId,
-                            created_at: serverTimestamp()
-                        });
-                    });
-
-                    await batch.commit();
-                    showToast(`Berhasil menyimpan ${scannedList.length} paket`);
-                    setScannedList([]);
-
-                    setConfirmState({
-                        isOpen: true,
-                        title: "Simpan Berhasil",
-                        message: "Data tersimpan. Cetak Surat Jalan sekarang?",
-                        type: "success",
-                        confirmLabel: "Cetak & Preview",
-                        cancelLabel: "Nanti",
-                        onConfirm: () => {
-                            setPrintData(handoverData);
-                            setConfirmState(prev => ({ ...prev, isOpen: false }));
-                        }
-                    });
-
-                } catch (err) {
-                    console.error(err);
-                    showToast("Gagal menyimpan data", "error");
-                } finally {
-                    setIsSubmitting(false);
-                }
-            };
-
-            return (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative">
-                    <ConfirmModal isOpen={confirmState.isOpen} data={confirmState} onClose={() => setConfirmState(prev => ({ ...prev, isOpen: false }))} />
-                    <SuratJalanPrintModal data={printData} onClose={() => setPrintData(null)} />
-                    {editState.isOpen && (
-                        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 animate-in fade-in zoom-in duration-200">
-                            <Card className="w-full max-w-md p-6 shadow-2xl">
-                                <h3 className="font-bold text-lg mb-4 text-slate-800 border-b pb-2 flex justify-between items-center">Edit Data Paket<button onClick={() => setEditState({ ...editState, isOpen: false })}><Icon name="x" size={20} /></button></h3>
-                                <div className="space-y-4">
-                                    <Input label="AWB" value={editState.form.awb} onChange={(val) => setEditState(prev => ({ ...prev, form: { ...prev.form, awb: val } }))} />
-                                    <div className="flex flex-col gap-1"><label className="text-sm font-semibold text-slate-600">Remarks</label><select value={editState.form.remarks_hub} onChange={(e) => setEditState(prev => ({ ...prev, form: { ...prev.form, remarks_hub: e.target.value } }))} className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none w-full">{remarks.map(r => <option key={r} value={r}>{r}</option>)}</select></div>
-                                    <Input label="Keterangan Fisik" value={editState.form.keterangan_fisik} onChange={(val) => setEditState(prev => ({ ...prev, form: { ...prev.form, keterangan_fisik: val } }))} />
-                                    <div className="flex justify-end gap-2 mt-6"><Button variant="secondary" onClick={() => setEditState({ ...editState, isOpen: false })}>Batal</Button><Button onClick={saveEdit}>Simpan Perubahan</Button></div>
-                                </div>
-                            </Card>
-                        </div>
-                    )}
-
-                    <div className="lg:col-span-4 space-y-6">
-                        <Card className="p-6">
-                            <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2"><Icon name="plus" size={18} className="text-blue-500" />Scan / Input Paket</h3>
-                            
-                            {/* UPDATE: PILIH PENGIRIM */}
-                            <div className="mb-4">
-                                <label className="text-sm font-semibold text-slate-600 mb-2 block">Pilih Pengirim (HUB)</label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {/* Default User */}
-                                    <button 
-                                        type="button"
-                                        onClick={() => setSelectedSender(currentUser.name)}
-                                        className={`px-3 py-2 text-sm rounded-lg border font-medium transition-all ${
-                                            selectedSender === currentUser.name ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                                        }`}
-                                    >
-                                        {currentUser.name} (Saya)
-                                    </button>
-                                    
-                                    {/* Additional Senders from Settings */}
-                                    {senders && senders.map((sender) => (
-                                        <button 
-                                            key={sender}
-                                            type="button"
-                                            onClick={() => setSelectedSender(sender)}
-                                            className={`px-3 py-2 text-sm rounded-lg border font-medium transition-all ${
-                                                selectedSender === sender ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                                            }`}
-                                        >
-                                            {sender}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <form onSubmit={addPackageToList} className="space-y-4">
-                                <Input label="Scan AWB" value={currentAwb} onChange={setCurrentAwb} placeholder="Tembak Barcode..." />
-                                <div className="flex flex-col gap-1"><label className="text-sm font-semibold text-slate-600">Remarks HUB</label><select value={currentRemark} onChange={(e) => setCurrentRemark(e.target.value)} className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none w-full">{remarks.map(r => <option key={r} value={r}>{r}</option>)}</select></div>
-                                {currentRemark === "Tanpa AWB" && (<Input label="Ciri-ciri Fisik" value={currentKeterangan} onChange={setCurrentKeterangan} placeholder="Warna, ukuran..." />)}
-                                <Button type="submit" className="w-full">Tambahkan ke List</Button>
-                            </form>
-                        </Card>
-                        <Card className="p-6 bg-blue-600 text-white border-none">
-                            <h4 className="font-bold opacity-80 uppercase text-xs tracking-widest mb-2">Total Batch</h4>
-                            <div className="flex items-end justify-between"><p className="text-4xl font-bold">{scannedList.length}</p><p className="text-sm">Paket Siap</p></div>
-                            <Button disabled={scannedList.length === 0 || isSubmitting} onClick={submitHandover} variant="success" className="w-full mt-6 bg-white text-blue-600 hover:bg-slate-100">{isSubmitting ? "Memproses..." : "Submit Semua"}</Button>
-                        </Card>
-                    </div>
-
-                    <div className="lg:col-span-8">
-                        <Card className="min-h-[400px]">
-                            <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-                                <div className="flex flex-wrap justify-between items-center gap-4">
-                                    <div className="font-bold text-slate-700 text-lg">Daftar Tunggu Handover</div>
-                                    <div className="flex gap-4 text-xs md:text-sm">
-                                        <div className="bg-white px-3 py-1 rounded border shadow-sm"><span className="text-slate-500 block text-[10px] uppercase font-bold">Tanggal</span><span className="font-mono font-medium">{currentDateStr}</span></div>
-                                        <div className="bg-white px-3 py-1 rounded border shadow-sm"><span className="text-slate-500 block text-[10px] uppercase font-bold">HUB (Pengirim)</span><span className="font-medium text-blue-600">{selectedSender}</span></div>
-                                        <div className="bg-blue-50 px-3 py-1 rounded border border-blue-100 shadow-sm"><span className="text-blue-500 block text-[10px] uppercase font-bold">No. Handover</span><span className="font-mono font-bold text-blue-700">{generatedHandoverId}</span></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm">
-                                    <thead className="bg-slate-50 text-slate-500 text-xs"><tr><th className="px-6 py-3">AWB</th><th className="px-6 py-3">Remarks</th><th className="px-6 py-3">Keterangan</th><th className="px-6 py-3 text-right">Aksi</th></tr></thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {scannedList.map((item) => (
-                                            <tr key={item.temp_id} className="hover:bg-slate-50"><td className="px-6 py-3 font-mono font-medium">{item.awb || "-"}</td><td className="px-6 py-3"><span className="text-xs bg-slate-100 px-2 py-0.5 rounded">{item.remarks_hub}</span></td><td className="px-6 py-3 text-slate-500">{item.keterangan_fisik || "-"}</td><td className="px-6 py-3 text-right"><div className="flex justify-end gap-2"><button onClick={() => triggerEdit(item)} className="text-blue-400 hover:text-blue-600 p-1 hover:bg-blue-50 rounded" title="Edit"><Icon name="pencil" size={16} /></button><button onClick={() => triggerDelete(item.temp_id)} className="text-red-400 hover:text-red-600 p-1 hover:bg-red-50 rounded" title="Hapus"><Icon name="trash-2" size={16} /></button></div></td></tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                                {scannedList.length === 0 && (<div className="p-10 text-center text-slate-400 flex flex-col items-center"><Icon name="package-search" size={48} className="opacity-20 mb-2" /><p>Belum ada paket yang di-scan.</p></div>)}
-                            </div>
-                        </Card>
-                    </div>
-                </div>
-            );
-        }
-
-        // --- COMPONENT: HD INPUT ---
-        function HdInputView({ packages, showToast, currentUser }) {
-            const [bulkInput, setBulkInput] = useState("");
-            const [isProcessing, setIsProcessing] = useState(false);
-            
-            // State untuk Konfirmasi & Cetak (Sama seperti HUB)
-            const [confirmState, setConfirmState] = useState({ isOpen: false, title: "", message: "", type: "info", confirmLabel: "", cancelLabel: "", onConfirm: () => {} });
-            const [printData, setPrintData] = useState(null);
-
-            const processHdHandover = async () => {
-                if (!bulkInput.trim()) return;
-                setIsProcessing(true);
-                
-                // Parsing Input: Mendukung format "AWB" atau "AWB, Remarks" (separator koma, tab, atau pipe)
-                const lines = bulkInput.split('\n').filter(l => l.trim() !== "");
-                const processedItems = lines.map(line => {
-                    // Cek separator common (koma, tab, pipe)
-                    const parts = line.split(/[\t,|]/); 
-                    const awb = parts[0].trim();
-                    // Jika ada text setelah separator, jadikan remarks. Jika tidak, default "Sesuai"
-                    const remarks = parts.length > 1 && parts[1].trim() !== "" ? parts[1].trim() : "Sesuai";
-                    return { awb, remarks };
+                batch.set(handoverRef, {
+                    handoverId: currentBatchId,
+                    date: hubDate,
+                    hubOrigin: hubOrigin,
+                    picHub: currentUserData.username,
+                    totalItems: finalItems.length,
+                    items: finalItems,
+                    createdAt: new Date()
                 });
 
-                let matchedCount = 0;
-                let anomaliCount = 0;
-
-                try {
-                    const batch = writeBatch(db);
-                    const handoverId = `HO-HD-${Date.now()}`; // Bisa diganti logic generate ID jika perlu
-
-                    const handoverRef = doc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'handovers'), handoverId);
-                    
-                    // Siapkan data item untuk Surat Jalan
-                    const detailedItems = processedItems.map(item => ({
+                // 2. Packages Doc
+                finalItems.forEach(item => {
+                    const newPkgRef = doc(PACKAGES_COLLECTION);
+                    batch.set(newPkgRef, {
+                        date: item.date,
                         awb: item.awb,
-                        remarks: item.remarks,
-                        description: "-" // Deskripsi fisik kosong default untuk HD
-                    }));
-
-                    const handoverData = {
-                        id: handoverId,
-                        type: 'HD-HUB',
-                        sender: currentUser.name,
-                        total_items: processedItems.length,
-                        timestamp: { toDate: () => new Date() }, // Mock date for preview
-                        items: detailedItems
-                    };
-
-                    // Simpan Master Handover
-                    batch.set(handoverRef, {
-                        ...handoverData,
-                        timestamp: serverTimestamp()
+                        remaksHub: item.remark,
+                        ciri: item.ciri,
+                        picInput: item.picInput,
+                        picHub: currentUserData.username,
+                        status: 'Proses',
+                        createdAt: new Date()
                     });
 
-                    // Proses setiap AWB
-                    for (const item of processedItems) {
-                        const existingPkg = packages.find(p => p.awb === item.awb && p.status_paket === 'Di HD');
-                        
-                        if (existingPkg) {
-                            const pkgRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'packages', existingPkg.id);
-                            batch.update(pkgRef, {
-                                status_paket: "Kembali ke HUB",
-                                tanggal_kembali: serverTimestamp(),
-                                remarks_hd: item.remarks, // Remarks spesifik per item
-                                hd_validator: currentUser.name
-                            });
-                            matchedCount++;
-                        } else {
-                            // Anomali (Barang tidak ada di sistem HUB tapi dikembalikan HD)
-                            const newAnomaliRef = doc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'packages'));
-                            batch.set(newAnomaliRef, {
-                                awb: item.awb,
-                                status_paket: "Anomali HD",
-                                tanggal_kembali: serverTimestamp(),
-                                remarks_hd: item.remarks, // Remarks spesifik per item
-                                catatan_hd: "Tidak Terdata di HUB sebelumnya",
-                                hd_validator: currentUser.name,
-                                created_at: serverTimestamp(),
-                                pengirim_hub: "System (Anomali)"
-                            });
-                            anomaliCount++;
-                        }
+                    if (item.draftId) {
+                        const draftRef = doc(DRAFTS_COLLECTION, item.draftId);
+                        batch.delete(draftRef);
                     }
-
-                    await batch.commit();
-                    showToast(`Selesai: ${matchedCount} Match, ${anomaliCount} Anomali.`);
-                    setBulkInput("");
-
-                    // --- KONFIRMASI CETAK SURAT JALAN (Sama seperti HUB) ---
-                    setConfirmState({
-                        isOpen: true,
-                        title: "Handover Berhasil",
-                        message: "Data pengembalian tersimpan. Cetak Form Serah Terima sekarang?",
-                        type: "success",
-                        confirmLabel: "Cetak & Preview",
-                        cancelLabel: "Nanti",
-                        onConfirm: () => {
-                            setPrintData(handoverData);
-                            setConfirmState(prev => ({ ...prev, isOpen: false }));
-                        }
-                    });
-
-                } catch (err) {
-                    console.error(err);
-                    showToast("Gagal memproses data HD", "error");
-                } finally {
-                    setIsProcessing(false);
-                }
-            };
-
-            return (
-                <div className="max-w-4xl mx-auto space-y-6 relative">
-                    {/* MODAL KONFIRMASI */}
-                    <ConfirmModal 
-                        isOpen={confirmState.isOpen} 
-                        data={confirmState} 
-                        onClose={() => setConfirmState(prev => ({ ...prev, isOpen: false }))} 
-                    />
-
-                    {/* MODAL CETAK SURAT JALAN */}
-                    <SuratJalanPrintModal 
-                        data={printData} 
-                        onClose={() => setPrintData(null)} 
-                    />
-
-                    <Card className="p-6">
-                        <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
-                            <Icon name="truck" size={18} className="text-amber-500" />
-                            Proses Pengembalian HD ke HUB
-                        </h3>
-                        <div className="grid grid-cols-1 gap-6">
-                            <div className="flex flex-col gap-2">
-                                <div className="flex justify-between items-center">
-                                    <label className="text-sm font-semibold text-slate-600">
-                                        List AWB & Feedback
-                                    </label>
-                                    <span className="text-xs text-slate-400 italic">
-                                        Format: <strong>AWB</strong> (Enter) atau <strong>AWB, Keterangan</strong>
-                                    </span>
-                                </div>
-                                <textarea 
-                                    rows={12}
-                                    value={bulkInput}
-                                    onChange={(e) => setBulkInput(e.target.value)}
-                                    placeholder={`Contoh:\nJD0123456789\nJD0987654321, Rusak Packing\nJD1122334455, Retur Customer`}
-                                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none font-mono text-sm leading-relaxed"
-                                />
-                                <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 text-xs text-amber-700 flex gap-2">
-                                    <Icon name="info" size={16} className="shrink-0 mt-0.5" />
-                                    <p>Masukkan satu AWB per baris. Jika AWB tidak memiliki keterangan (separator koma/tab), sistem otomatis memberi status <strong>"Sesuai"</strong>.</p>
-                                </div>
-                            </div>
-                            
-                            <Button 
-                                onClick={processHdHandover} 
-                                className="w-full bg-amber-600 hover:bg-amber-700 h-14 text-lg shadow-lg shadow-amber-600/20"
-                                disabled={isProcessing || !bulkInput.trim()}
-                            >
-                                {isProcessing ? "Memproses Data..." : "Proses Balik ke HUB & Cetak"}
-                            </Button>
-                        </div>
-                    </Card>
-                </div>
-            );
-        }
-
-        // --- COMPONENT: DATA HANDOVER (Replacing SuratJalanList) ---
-        function DataHandoverView({ handovers, packages }) {
-            const [selectedHo, setSelectedHo] = useState(null);
-            const [activeTab, setActiveTab] = useState('history'); // 'history' or 'detail'
-            
-            // State untuk filter tabel detail
-            const [searchTerm, setSearchTerm] = useState("");
-            const [filterStatus, setFilterStatus] = useState("All");
-
-            // Logic filter data paket
-            const filteredPackages = useMemo(() => {
-                return packages.filter(p => {
-                    const term = searchTerm.toLowerCase();
-                    const matchSearch = 
-                        (p.awb || "").toLowerCase().includes(term) || 
-                        (p.handover_id || "").toLowerCase().includes(term) ||
-                        (p.keterangan_fisik || "").toLowerCase().includes(term) ||
-                        (p.pengirim_hub || "").toLowerCase().includes(term) ||
-                        (p.hd_validator || "").toLowerCase().includes(term); // Tambahkan pencarian validator
-                    
-                    const matchStatus = filterStatus === "All" || p.status_paket === filterStatus;
-                    return matchSearch && matchStatus;
                 });
-            }, [packages, searchTerm, filterStatus]);
 
-            return (
-                <div className="space-y-6">
-                    {/* TABS NAVIGATION */}
-                    <div className="flex gap-4 border-b border-slate-200 pb-1">
-                        <button 
-                            onClick={() => setActiveTab('history')}
-                            className={`px-4 py-2 font-semibold text-sm transition-colors ${activeTab === 'history' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-                        >
-                            Riwayat Serah Terima
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('detail')}
-                            className={`px-4 py-2 font-semibold text-sm transition-colors ${activeTab === 'detail' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-                        >
-                            Data Lengkap & Validasi
-                        </button>
-                    </div>
+                await batch.commit();
 
-                    {/* TAB CONTENT: HISTORY */}
-                    {activeTab === 'history' && (
-                        <Card>
-                            <div className="p-4 border-b border-slate-100 font-bold text-slate-700">Riwayat Serah Terima (Cetak Ulang)</div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm">
-                                    <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
-                                        <tr>
-                                            <th className="px-6 py-4">No. Surat</th>
-                                            <th className="px-6 py-4">Tipe</th>
-                                            <th className="px-6 py-4">Pengirim</th>
-                                            <th className="px-6 py-4">Total</th>
-                                            <th className="px-6 py-4">Waktu</th>
-                                            <th className="px-6 py-4 text-right">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {handovers.map(ho => (
-                                            <tr key={ho.id} className="hover:bg-slate-50">
-                                                <td className="px-6 py-4 font-mono font-bold text-blue-600">{ho.id}</td>
-                                                <td className="px-6 py-4 font-semibold">{ho.type}</td>
-                                                <td className="px-6 py-4 text-slate-600">{ho.sender}</td>
-                                                <td className="px-6 py-4 font-bold">{ho.total_items}</td>
-                                                <td className="px-6 py-4 text-slate-500">{ho.timestamp?.toDate?.().toLocaleString('id-ID')}</td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <Button onClick={() => setSelectedHo(ho)} variant="outline" className="text-xs inline-flex py-1 px-3">
-                                                        <Icon name="printer" size={14} /> Cetak
-                                                    </Button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                                {handovers.length === 0 && <div className="p-10 text-center text-slate-400">Belum ada riwayat.</div>}
-                            </div>
-                        </Card>
-                    )}
+                printHandover(finalItems, currentBatchId);
+                
+                // Reset
+                localDraft = [];
+                currentBatchId = null;
+                document.getElementById('display-handover-id').innerText = "-";
+                renderTempTable();
+                showToast("Sukses Submit", "success");
 
-                    {/* TAB CONTENT: DETAIL & VALIDASI (FULL TABLE EXPANDED) */}
-                    {activeTab === 'detail' && (
-                        <Card className="min-h-[600px] flex flex-col">
-                            {/* Toolbar Filter */}
-                            <div className="p-4 border-b border-slate-100 bg-slate-50 flex flex-col md:flex-row justify-between items-center gap-4">
-                                <h3 className="font-bold text-slate-700 flex items-center gap-2">
-                                    <Icon name="database" size={18} className="text-blue-500" />
-                                    Data Semua Paket (Breakdown Lengkap)
-                                </h3>
-                                <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
-                                    <select 
-                                        value={filterStatus} 
-                                        onChange={(e) => setFilterStatus(e.target.value)}
-                                        className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                                    >
-                                        <option value="All">Semua Status</option>
-                                        <option value="Di HD">Di HD</option>
-                                        <option value="Kembali ke HUB">Kembali ke HUB</option>
-                                        <option value="Anomali HD">Anomali HD</option>
-                                    </select>
-                                    <div className="relative w-full md:w-64">
-                                        <Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                        <input 
-                                            type="text" 
-                                            value={searchTerm}
-                                            onChange={(e) => setSearchTerm(e.target.value)}
-                                            placeholder="Cari AWB, Handover, User..."
-                                            className="pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none w-full"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
+            } catch(e) { showToast("Error: " + e.message, "error"); }
+        };
 
-                            {/* Tabel Data Lengkap Breakdown */}
-                            <div className="overflow-x-auto flex-1">
-                                <table className="w-full text-left text-sm whitespace-nowrap">
-                                    <thead className="bg-white text-slate-500 text-xs uppercase font-bold sticky top-0 shadow-sm z-10">
-                                        <tr>
-                                            <th className="px-4 py-3 bg-slate-50 border-b w-10 text-center">No</th>
-                                            <th className="px-4 py-3 bg-slate-50 border-b">Waktu Input (HUB)</th>
-                                            <th className="px-4 py-3 bg-slate-50 border-b">No. Handover</th>
-                                            <th className="px-4 py-3 bg-slate-50 border-b">Pengirim (HUB)</th>
-                                            <th className="px-4 py-3 bg-slate-50 border-b">AWB / Resi</th>
-                                            <th className="px-4 py-3 bg-slate-50 border-b">Ket. Fisik</th>
-                                            <th className="px-4 py-3 bg-slate-50 border-b">Remarks HUB</th>
-                                            <th className="px-4 py-3 bg-slate-50 border-b text-center">Status</th>
-                                            <th className="px-4 py-3 bg-slate-50 border-b">Waktu Validasi (HD)</th>
-                                            <th className="px-4 py-3 bg-slate-50 border-b">Validator (HD)</th>
-                                            <th className="px-4 py-3 bg-slate-50 border-b">Remarks HD</th>
-                                            <th className="px-4 py-3 bg-slate-50 border-b">Catatan HD</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {filteredPackages.map((pkg, index) => (
-                                            <tr key={pkg.id} className="hover:bg-slate-50 transition-colors">
-                                                <td className="px-4 py-3 text-slate-500 text-xs text-center border-r border-slate-50">{index + 1}</td>
-                                                
-                                                {/* DATA HUB */}
-                                                <td className="px-4 py-3 text-slate-600 text-xs">
-                                                    <div>{pkg.created_at?.toDate?.().toLocaleDateString('id-ID') || "-"}</div>
-                                                    <div className="text-[10px] text-slate-400">{pkg.created_at?.toDate?.().toLocaleTimeString('id-ID') || ""}</div>
-                                                </td>
-                                                <td className="px-4 py-3 font-mono font-bold text-blue-600 text-xs">
-                                                    {pkg.handover_id || <span className="text-slate-300 italic">-</span>}
-                                                </td>
-                                                <td className="px-4 py-3 text-slate-700 text-xs font-medium">{pkg.pengirim_hub}</td>
-                                                <td className="px-4 py-3 font-mono font-medium text-slate-800 text-xs border-l border-slate-50">
-                                                    {pkg.awb || "-"}
-                                                </td>
-                                                <td className="px-4 py-3 text-slate-500 text-xs italic">
-                                                    {pkg.keterangan_fisik || "-"}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <span className="bg-slate-100 px-2 py-1 rounded text-[10px] border border-slate-200 text-slate-600">{pkg.remarks_hub}</span>
-                                                </td>
+        // --- HISTORY & REPRINT ---
+        window.openHistoryModal = () => {
+            window.openModal('history-modal');
+            loadHistory();
+        };
 
-                                                {/* STATUS */}
-                                                <td className="px-4 py-3 text-center border-l border-r border-slate-50">
-                                                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase border ${
-                                                        pkg.status_paket === 'Di HD' ? 'bg-amber-100 text-amber-700 border-amber-200' :
-                                                        pkg.status_paket === 'Kembali ke HUB' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
-                                                        'bg-red-100 text-red-700 border-red-200'
-                                                    }`}>
-                                                        {pkg.status_paket}
-                                                    </span>
-                                                </td>
+        function loadHistory() {
+            const tbody = document.getElementById('history-list-body');
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4">Memuat...</td></tr>`;
 
-                                                {/* DATA HD */}
-                                                <td className="px-4 py-3 text-slate-600 text-xs">
-                                                    {pkg.tanggal_kembali ? (
-                                                        <>
-                                                            <div>{pkg.tanggal_kembali.toDate().toLocaleDateString('id-ID')}</div>
-                                                            <div className="text-[10px] text-slate-400">{pkg.tanggal_kembali.toDate().toLocaleTimeString('id-ID')}</div>
-                                                        </>
-                                                    ) : "-"}
-                                                </td>
-                                                <td className="px-4 py-3 text-slate-700 text-xs font-medium">
-                                                    {pkg.hd_validator || "-"}
-                                                </td>
-                                                <td className="px-4 py-3 text-slate-700 text-xs">
-                                                    {pkg.remarks_hd || "-"}
-                                                </td>
-                                                <td className="px-4 py-3 text-slate-500 text-xs italic max-w-[200px] truncate" title={pkg.catatan_hd}>
-                                                    {pkg.catatan_hd || "-"}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {filteredPackages.length === 0 && (
-                                            <tr>
-                                                <td colSpan="12" className="p-10 text-center text-slate-400">
-                                                    <div className="flex flex-col items-center gap-2">
-                                                        <Icon name="search-x" size={32} className="opacity-30" />
-                                                        <span>Data tidak ditemukan.</span>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div className="p-4 border-t border-slate-100 bg-slate-50 text-xs text-slate-500 text-right">
-                                Menampilkan {filteredPackages.length} data paket
-                            </div>
-                        </Card>
-                    )}
-
-                    {/* Menggunakan Reusable Component untuk Modal */}
-                    <SuratJalanPrintModal 
-                        data={selectedHo} 
-                        onClose={() => setSelectedHo(null)} 
-                    />
-                </div>
-            );
-        }
-
-        // --- COMPONENT: SETTINGS ---
-        function SettingsView({ remarks, senders, showToast }) {
-            const [newRemark, setNewRemark] = useState("");
-            const [newSender, setNewSender] = useState(""); // Input Pengirim Baru
-            const [users, setUsers] = useState([]);
-            
-            // User Form States
-            const [uName, setUName] = useState("");
-            const [uUser, setUUser] = useState("");
-            const [uPass, setUPass] = useState("");
-            const [uRole, setURole] = useState("hub");
-            const [isEditingUser, setIsEditingUser] = useState(null);
-
-            useEffect(() => {
-                const qUsers = query(collection(db, 'artifacts', APP_ID, 'public', 'data', 'users'));
-                const unsub = onSnapshot(qUsers, (snap) => {
-                    setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-                });
-                return () => unsub();
-            }, []);
-
-            // Remarks Logic
-            const handleAddRemark = async () => {
-                if (!newRemark.trim()) return;
-                const updated = [...remarks, newRemark];
-                await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'settings', 'config'), { hub_remarks: updated }, { merge: true });
-                setNewRemark("");
-            };
-
-            const handleRemoveRemark = async (rem) => {
-                const updated = remarks.filter(r => r !== rem);
-                await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'settings', 'config'), { hub_remarks: updated }, { merge: true });
-            };
-
-            // Sender Logic
-            const handleAddSender = async () => {
-                if (!newSender.trim()) return;
-                const currentSenders = senders || [];
-                const updated = [...currentSenders, newSender];
-                await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'settings', 'config'), { hub_senders: updated }, { merge: true });
-                setNewSender("");
-                showToast("Pengirim HUB berhasil ditambahkan");
-            };
-
-            const handleRemoveSender = async (senderName) => {
-                const updated = (senders || []).filter(s => s !== senderName);
-                await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'settings', 'config'), { hub_senders: updated }, { merge: true });
-                showToast("Pengirim HUB dihapus");
-            };
-
-            // User Management Logic
-            const handleSaveUser = async (e) => {
-                e.preventDefault();
-                try {
-                    const userData = {
-                        name: uName,
-                        username: uUser,
-                        password: uPass,
-                        role: uRole
-                    };
-
-                    if (isEditingUser) {
-                        await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', isEditingUser), userData);
-                        showToast("User berhasil diperbarui");
-                    } else {
-                        if (users.some(u => u.username === uUser)) {
-                            showToast("Username sudah dipakai", "error");
-                            return;
-                        }
-                        await addDoc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'users'), {
-                            ...userData,
-                            created_at: serverTimestamp()
-                        });
-                        showToast("User berhasil ditambah");
-                    }
-                    resetUserForm();
-                } catch (err) {
-                    console.error(err);
-                    showToast("Gagal menyimpan user", "error");
-                }
-            };
-
-            const handleDeleteUser = async (id) => {
-                if (users.length <= 1) {
-                    showToast("Tidak bisa menghapus user terakhir", "error");
+            onSnapshot(query(HANDOVERS_COLLECTION, orderBy('createdAt', 'desc'), limit(20)), (snap) => {
+                if (snap.empty) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-gray-400">Belum ada riwayat</td></tr>`;
                     return;
                 }
-                if (confirm("Yakin hapus user ini?")) {
-                    await deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', id));
-                    showToast("User dihapus");
-                }
-            };
 
-            const editUser = (user) => {
-                setIsEditingUser(user.id);
-                setUName(user.name);
-                setUUser(user.username);
-                setUPass(user.password);
-                setURole(user.role);
-            };
-
-            const resetUserForm = () => {
-                setIsEditingUser(null);
-                setUName("");
-                setUUser("");
-                setUPass("");
-                setURole("hub");
-            };
-
-            return (
-                <div className="space-y-8">
-                    {/* MANAJEMEN REMARKS */}
-                    <Card className="max-w-4xl p-6">
-                        <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
-                            <Icon name="settings" size={18} className="text-slate-500" />
-                            Master Data Remarks HUB
-                        </h3>
-                        <div className="flex gap-2 mb-6">
-                            <Input className="flex-1" value={newRemark} onChange={setNewRemark} placeholder="Tambah remark..." />
-                            <Button onClick={handleAddRemark} className="mt-auto">Tambah</Button>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            {remarks.map(r => (
-                                <div key={r} className="flex items-center gap-2 px-3 py-2 bg-slate-100 border rounded-lg text-sm">
-                                    <span>{r}</span>
-                                    <button onClick={() => handleRemoveRemark(r)} className="text-red-400 hover:text-red-600"><Icon name="x" size={14} /></button>
-                                </div>
-                            ))}
-                        </div>
-                    </Card>
-
-                    {/* MANAJEMEN PENGIRIM HUB */}
-                    <Card className="max-w-4xl p-6">
-                        <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
-                            <Icon name="user-check" size={18} className="text-slate-500" />
-                            Master Data Pengirim HUB (Opsi Pilihan)
-                        </h3>
-                        <div className="flex gap-2 mb-6">
-                            <Input className="flex-1" value={newSender} onChange={setNewSender} placeholder="Tambah nama pengirim..." />
-                            <Button onClick={handleAddSender} className="mt-auto">Tambah</Button>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            {senders && senders.map(s => (
-                                <div key={s} className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-700">
-                                    <span>{s}</span>
-                                    <button onClick={() => handleRemoveSender(s)} className="text-red-400 hover:text-red-600"><Icon name="x" size={14} /></button>
-                                </div>
-                            ))}
-                            {(!senders || senders.length === 0) && <span className="text-sm text-slate-400 italic">Belum ada pengirim tambahan.</span>}
-                        </div>
-                    </Card>
-
-                    {/* MANAJEMEN USER */}
-                    <Card className="max-w-4xl p-6">
-                        <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
-                            <Icon name="users" size={18} className="text-slate-500" />
-                            Manajemen User & Login
-                        </h3>
-                        <form onSubmit={handleSaveUser} className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6 grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-                            <div className="md:col-span-1"><Input label="Nama Lengkap" value={uName} onChange={setUName} required /></div>
-                            <div className="md:col-span-1"><Input label="Username" value={uUser} onChange={setUUser} required /></div>
-                            <div className="md:col-span-1"><Input label="Password" value={uPass} onChange={setUPass} required /></div>
-                            <div className="md:col-span-1">
-                                <label className="text-sm font-semibold text-slate-600">Role</label>
-                                <select value={uRole} onChange={e => setURole(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
-                                    <option value="admin">Admin</option>
-                                    <option value="hub">Tim HUB</option>
-                                    <option value="hd">Tim HD</option>
-                                    <option value="visitor">Visitor</option>
-                                </select>
-                            </div>
-                            <div className="flex gap-2">
-                                <Button type="submit" variant={isEditingUser ? "success" : "primary"} className="flex-1">
-                                    {isEditingUser ? "Update" : "Simpan"}
-                                </Button>
-                                {isEditingUser && <Button onClick={resetUserForm} variant="secondary">Batal</Button>}
-                            </div>
-                        </form>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-100 text-slate-600 text-xs uppercase"><tr><th className="px-4 py-2">Nama</th><th className="px-4 py-2">Username</th><th className="px-4 py-2">Role</th><th className="px-4 py-2">Password</th><th className="px-4 py-2 text-right">Aksi</th></tr></thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {users.map(u => (
-                                        <tr key={u.id}><td className="px-4 py-3 font-medium">{u.name}</td><td className="px-4 py-3">{u.username}</td><td className="px-4 py-3 capitalize"><span className="bg-slate-200 px-2 py-0.5 rounded text-xs">{u.role}</span></td><td className="px-4 py-3 font-mono text-xs text-slate-400">********</td><td className="px-4 py-3 text-right flex justify-end gap-2"><button onClick={() => editUser(u)} className="text-blue-500 hover:text-blue-700"><Icon name="edit-2" size={16} /></button><button onClick={() => handleDeleteUser(u.id)} className="text-red-400 hover:text-red-600"><Icon name="trash-2" size={16} /></button></td></tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </Card>
-                </div>
-            );
+                let html = '';
+                snap.forEach(d => {
+                    const data = d.data();
+                    html += `
+                        <tr class="hover:bg-gray-50 border-b border-gray-100">
+                            <td class="p-3 font-mono font-bold text-blue-600">${data.handoverId}</td>
+                            <td class="p-3">${data.date}</td>
+                            <td class="p-3">${data.hubOrigin}</td>
+                            <td class="p-3 font-bold">${data.totalItems}</td>
+                            <td class="p-3 text-right">
+                                <button onclick="window.reprintHandover('${d.id}')" class="bg-gray-700 text-white px-3 py-1 rounded text-xs font-bold hover:bg-black">
+                                    <i class="fas fa-print mr-1"></i>Cetak
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML = html;
+            });
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        window.reprintHandover = async (docId) => {
+            try {
+                const docSnap = await getDoc(doc(HANDOVERS_COLLECTION, docId));
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    printHandover(data.items, data.handoverId, true); 
+                    window.closeModal('history-modal');
+                }
+            } catch(e) { showToast("Gagal load: " + e.message, "error"); }
+        };
+
+        function printHandover(items, handoverId, isReprint = false) {
+            document.getElementById('print-no-handover').innerText = handoverId + (isReprint ? " (COPY)" : "");
+            // Use header info from first item (as batch is uniform)
+            document.getElementById('print-date').innerText = items[0]?.date || "-";
+            document.getElementById('print-hub-origin').innerText = items[0]?.hubOrigin || "-";
+            
+            document.getElementById('print-pic').innerText = currentUserData.fullname || currentUserData.username;
+            document.getElementById('print-signer-hub').innerText = currentUserData.fullname || currentUserData.username;
+            document.getElementById('print-total').innerText = items.length + " Paket";
+
+            let html = '';
+            items.forEach((item, idx) => {
+                html += `
+                    <tr>
+                        <td class="border border-black p-2 text-center">${idx + 1}</td>
+                        <td class="border border-black p-2 font-mono">${item.awb}</td>
+                        <td class="border border-black p-2">${item.remark}</td>
+                        <td class="border border-black p-2">${item.ciri}</td>
+                    </tr>
+                `;
+            });
+            document.getElementById('print-table-body').innerHTML = html;
+
+            document.getElementById('print-area').classList.remove('hidden');
+            window.print();
+            setTimeout(() => { document.getElementById('print-area').classList.add('hidden'); }, 1000);
+        }
+
+        // --- SHARED FUNCTIONS ---
+        window.openEditPaketModal = (id, date, awb, rhub, ciri, dback, rhd, status, picHub, picHd) => {
+            document.getElementById('edit-paket-id').value = id;
+            document.getElementById('edit-paket-date').value = date;
+            document.getElementById('edit-paket-awb').value = awb;
+            document.getElementById('edit-paket-ciri').value = ciri;
+            document.getElementById('edit-paket-date-back').value = dback;
+            document.getElementById('edit-paket-status').value = status;
+            document.getElementById('edit-paket-pic-hub').value = picHub;
+            document.getElementById('edit-paket-pic-hd').value = picHd;
+            
+            populateSelect(document.getElementById('edit-paket-remaks-hub'), cachedRemarks, "- Pilih Remarks -");
+            populateSelect(document.getElementById('edit-paket-remaks-hd'), cachedRemarks, "- Pilih Remarks -");
+            
+            document.getElementById('edit-paket-remaks-hub').value = rhub;
+            document.getElementById('edit-paket-remaks-hd').value = rhd;
+
+            window.openModal('edit-paket-modal');
+        };
+
+        window.saveEditedPaket = async () => {
+            const id = document.getElementById('edit-paket-id').value;
+            const data = {
+                date: document.getElementById('edit-paket-date').value,
+                awb: document.getElementById('edit-paket-awb').value,
+                remaksHub: document.getElementById('edit-paket-remaks-hub').value,
+                ciri: document.getElementById('edit-paket-ciri').value,
+                dateBack: document.getElementById('edit-paket-date-back').value,
+                remaksHd: document.getElementById('edit-paket-remaks-hd').value,
+                status: document.getElementById('edit-paket-status').value,
+                picHub: document.getElementById('edit-paket-pic-hub').value,
+                picHd: document.getElementById('edit-paket-pic-hd').value
+            };
+            
+            await updateDoc(doc(PACKAGES_COLLECTION, id), data);
+            window.closeModal('edit-paket-modal');
+            showToast("Data Paket Diupdate", "success");
+        };
+
+        // Update Delete functions to use showConfirm
+        window.deletePacket = async (id) => { 
+            if(await window.showConfirm("Hapus data paket ini secara permanen?")) { 
+                await deleteDoc(doc(PACKAGES_COLLECTION, id)); 
+                showToast("Data dihapus", "success"); 
+            }
+        };
+        
+        window.filterPackages = () => {
+            const input = document.getElementById('search-awb').value.toUpperCase();
+            const rows = document.getElementById('packet-list-body').getElementsByTagName('tr');
+            for (let i = 0; i < rows.length; i++) {
+                const td = rows[i].getElementsByTagName('td')[1]; 
+                if (td) {
+                    const txtValue = td.textContent || td.innerText;
+                    rows[i].style.display = txtValue.toUpperCase().indexOf(input) > -1 ? "" : "none";
+                }
+            }
+        };
+
+        window.createUser = async () => {
+            const fullname = document.getElementById('new-fullname').value;
+            const username = document.getElementById('new-username').value;
+            const password = document.getElementById('new-password').value;
+            const role = document.getElementById('new-role').value;
+            if(!username || !password) return showToast("Lengkapi Data", "error");
+            try {
+                const q = query(USERS_COLLECTION, where("username", "==", username));
+                if(!(await getDocs(q)).empty) return showToast("ID sudah dipakai", "error");
+                await addDoc(USERS_COLLECTION, { fullname, username, password, role, createdAt: new Date() });
+                document.getElementById('new-username').value = ""; document.getElementById('new-password').value = "";
+                showToast("User Dibuat", "success");
+            } catch(e) { showToast(e.message, "error"); }
+        };
+
+        // Update Delete User/Hub/Remark to use showConfirm
+        window.deleteUser = async (id) => { 
+            if(await window.showConfirm("Hapus User ini?")) { 
+                await deleteDoc(doc(USERS_COLLECTION, id)); 
+                showToast("User dihapus", "success");
+            } 
+        };
+        
+        window.saveEditedUser = async () => {
+            const id = document.getElementById('edit-doc-id').value;
+            const data = { fullname: document.getElementById('edit-fullname').value, role: document.getElementById('edit-role').value };
+            const pass = document.getElementById('edit-password').value;
+            if(pass) data.password = pass;
+            await updateDoc(doc(USERS_COLLECTION, id), data);
+            window.closeModal('edit-modal');
+        };
+
+        window.createHub = async () => { const name = document.getElementById('new-hub-name').value; if(!name) return; await addDoc(HUBS_COLLECTION, { name, createdAt: new Date() }); document.getElementById('new-hub-name').value = ""; };
+        
+        window.deleteHub = async (id) => { 
+            if(await window.showConfirm("Hapus HUB ini?")) { 
+                await deleteDoc(doc(HUBS_COLLECTION, id)); 
+                showToast("HUB dihapus", "success");
+            } 
+        };
+        
+        window.createRemark = async () => { const text = document.getElementById('new-remark-text').value; if(!text) return; await addDoc(REMARKS_COLLECTION, { text, createdAt: new Date() }); document.getElementById('new-remark-text').value = ""; };
+        
+        window.deleteRemark = async (id) => { 
+            if(await window.showConfirm("Hapus Remarks ini?")) { 
+                await deleteDoc(doc(REMARKS_COLLECTION, id)); 
+                showToast("Remarks dihapus", "success");
+            } 
+        };
+
+        window.openEditModal = (id, fn, un, rl) => { document.getElementById('edit-doc-id').value = id; document.getElementById('edit-fullname').value = fn; document.getElementById('edit-username').value = un; document.getElementById('edit-role').value = rl; window.openModal('edit-modal'); };
+        window.updateAdminPassword = async () => { const p = document.getElementById('new-admin-pass').value; if(p) { await updateDoc(ADMIN_CONFIG_DOC, {password:p}); document.getElementById('new-admin-pass').value = ""; showToast("Pass Updated"); }};
+        window.openModal = (id) => { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); };
+        window.closeModal = (id) => { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); };
+
+        initSystem();
     </script>
 </body>
 </html>
