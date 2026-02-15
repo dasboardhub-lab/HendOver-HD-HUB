@@ -3,48 +3,537 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Validasi Paket HUB-HD</title>
+    <title>Sistem Manajemen Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- React & ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
-    <!-- Babel (untuk JSX) -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        .font-mono { font-family: 'JetBrains Mono', monospace; }
-        /* Hide scrollbar for Chrome, Safari and Opera */
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none;  scrollbar-width: none; }
-        @media print { .no-print { display: none; } }
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4895ef;
+            --bg-body: #f8f9fa;
+            --bg-sidebar: #ffffff;
+            --text-main: #2b2d42;
+            --text-muted: #8d99ae;
+            --success: #2ec4b6;
+            --danger: #e63946;
+            --warning: #ffb703;
+            --border-radius: 12px;
+            --shadow: 0 4px 20px rgba(0,0,0,0.05);
+            --transition: all 0.3s ease;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background-color: var(--bg-body); color: var(--text-main); overflow-x: hidden; height: 100vh; }
+
+        /* UTILS */
+        .hidden { display: none !important; }
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .flex-center { display: flex; justify-content: center; align-items: center; }
+        .w-full { width: 100%; }
+        .gap-10 { gap: 10px; }
+        .mt-10 { margin-top: 10px; }
+        
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; transition: var(--transition); display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-primary:hover { background-color: var(--secondary-color); transform: translateY(-2px); }
+        .btn-danger { background-color: var(--danger); color: white; }
+        .btn-secondary { background-color: #e9ecef; color: var(--text-main); }
+        .btn-success { background-color: var(--success); color: white; }
+        .btn-sm { padding: 6px 12px; font-size: 0.85rem; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* LOGIN */
+        #login-section { height: 100vh; background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%); display: flex; align-items: center; justify-content: center; }
+        .login-card { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); width: 100%; max-width: 400px; animation: fadeInUp 0.6s ease; }
+        .login-header { text-align: center; margin-bottom: 30px; }
+        .login-tabs { display: flex; background: #f1f3f5; padding: 5px; border-radius: 10px; margin-bottom: 25px; }
+        .tab-btn { flex: 1; padding: 10px; border: none; background: transparent; border-radius: 8px; cursor: pointer; font-weight: 500; color: var(--text-muted); transition: var(--transition); }
+        .tab-btn.active { background: white; color: var(--primary-color); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+
+        /* FORMS */
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-size: 0.9rem; font-weight: 500; }
+        .input-wrapper { position: relative; }
+        .input-wrapper i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+        .form-control { width: 100%; padding: 12px 15px; border: 2px solid #e9ecef; border-radius: 10px; font-size: 0.95rem; transition: var(--transition); }
+        .input-wrapper .form-control { padding-left: 45px; }
+        .form-control:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15); }
+
+        /* DASHBOARD LAYOUT */
+        #app-layout { display: flex; height: 100vh; }
+        .sidebar { width: 260px; background: var(--bg-sidebar); border-right: 1px solid #e9ecef; display: flex; flex-direction: column; padding: 20px; transition: var(--transition); }
+        
+        .logo-area { display: flex; align-items: center; gap: 12px; margin-bottom: 40px; padding: 0 10px; }
+        .logo-icon { width: 40px; height: 40px; background: var(--primary-color); color: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .logo-text { font-weight: 700; font-size: 1.2rem; color: var(--text-main); }
+
+        .nav-links { list-style: none; flex: 1; }
+        .nav-item { margin-bottom: 8px; }
+        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 15px; border-radius: 10px; text-decoration: none; color: var(--text-muted); font-weight: 500; transition: var(--transition); cursor: pointer; }
+        .nav-link:hover, .nav-link.active { background-color: rgba(67, 97, 238, 0.08); color: var(--primary-color); }
+        
+        .user-profile { display: flex; align-items: center; gap: 12px; padding: 15px; background: #f8f9fa; border-radius: 12px; margin-top: auto; }
+        .avatar { width: 40px; height: 40px; background: var(--accent-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; }
+        .logout-btn { margin-left: auto; color: var(--danger); cursor: pointer; padding: 5px; }
+
+        /* MAIN CONTENT */
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .page-title h1 { font-size: 1.8rem; font-weight: 700; }
+        .card { background: white; border-radius: var(--border-radius); padding: 25px; box-shadow: var(--shadow); margin-bottom: 20px; }
+        
+        /* TABLES */
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #f1f3f5; }
+        th { font-weight: 600; color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; }
+        .badge { padding: 5px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .badge-admin { background: #e0f2fe; color: #0284c7; }
+        .badge-hub { background: #dcfce7; color: #16a34a; }
+        
+        /* MODAL & TOAST */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; visibility: hidden; transition: var(--transition); }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box { background: white; padding: 30px; border-radius: 16px; width: 90%; max-width: 500px; transform: scale(0.9); transition: var(--transition); max-height: 90vh; overflow-y: auto; }
+        .modal-overlay.active .modal-box { transform: scale(1); }
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; }
+        .toast { background: white; padding: 15px 20px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.15); margin-bottom: 10px; display: flex; align-items: center; gap: 12px; border-left: 5px solid; animation: slideInRight 0.4s ease; min-width: 300px; }
+        .toast.success { border-color: var(--success); } .toast.error { border-color: var(--danger); }
+
+        /* TABS INSIDE CARD */
+        .card-tabs { display: flex; border-bottom: 1px solid #eee; margin-bottom: 20px; gap: 20px; }
+        .card-tab-btn { padding: 10px 0; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; color: var(--text-muted); font-weight: 500; }
+        .card-tab-btn.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+        
+        /* PRINT STYLE */
+        @media print {
+            .sidebar, .page-header, .no-print { display: none !important; }
+            body, #app-layout, .main-content { background: white; margin: 0; padding: 0; height: auto; overflow: visible; }
+            .card { box-shadow: none; border: none; padding: 0; }
+            .print-only { display: block !important; }
+            /* Force table borders for print */
+            table { border: 1px solid #000; }
+            th, td { border: 1px solid #000; padding: 8px; }
+        }
+        .print-only { display: none; }
+
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800">
-    <div id="root"></div>
+<body>
 
-    <!-- MAIN SCRIPT -->
-    <script type="text/babel" data-type="module">
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- KONFIRMASI MODAL -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal-box" style="max-width: 400px; text-align: center;">
+            <i class="fa-solid fa-triangle-exclamation" style="font-size: 3rem; color: var(--warning); margin-bottom: 15px;"></i>
+            <h3 id="confirmTitle">Konfirmasi</h3>
+            <p id="confirmMessage" style="color: var(--text-muted); margin: 10px 0 20px;">Yakin?</p>
+            <div class="flex-center" style="gap: 10px;">
+                <button class="btn btn-secondary" onclick="closeModal('confirmModal')">Batal</button>
+                <button class="btn btn-primary" id="confirmYesBtn">Ya</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PROMPT MODAL (PENGGANTI PROMPT BROWSER) -->
+    <div class="modal-overlay" id="promptModal">
+        <div class="modal-box" style="max-width: 400px;">
+            <h3 id="promptTitle" style="margin-bottom: 15px;">Input Data</h3>
+            <div class="form-group">
+                <input type="text" id="promptInput" class="form-control" placeholder="Ketik disini..." onkeypress="handlePromptKey(event)">
+            </div>
+            <div class="flex" style="justify-content: flex-end; gap: 10px;">
+                <button class="btn btn-secondary" onclick="closeModal('promptModal')">Batal</button>
+                <button class="btn btn-primary" id="promptSubmitBtn">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. LOGIN SECTION -->
+    <section id="login-section">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="logo-icon" style="margin: 0 auto 15px; width: 60px; height: 60px; font-size: 1.5rem;">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <h2>Selamat Datang</h2>
+                <p>Silakan masuk untuk melanjutkan</p>
+                <p id="auth-loading" style="font-size: 0.8rem; color: var(--primary-color); margin-top:5px;" class="hidden">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i> Menghubungkan ke Database...
+                </p>
+            </div>
+
+            <div class="login-tabs">
+                <button class="tab-btn active" onclick="switchLoginTab('user')">User</button>
+                <button class="tab-btn" onclick="switchLoginTab('admin')">Admin</button>
+            </div>
+
+            <form id="form-user" onsubmit="handleLogin(event, 'user')">
+                <div class="form-group">
+                    <label>ID User</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-id-card"></i>
+                        <input type="text" id="userIdInput" class="form-control" placeholder="ID User" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="password" id="userPassInput" class="form-control" placeholder="Password" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary w-full flex-center" id="btnLoginUser">Masuk <i class="fa-solid fa-arrow-right"></i></button>
+            </form>
+
+            <form id="form-admin" class="hidden" onsubmit="handleLogin(event, 'admin')">
+                <div class="form-group">
+                    <label>Password Admin</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <input type="password" id="adminPassInput" class="form-control" placeholder="Password Admin" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary w-full flex-center" id="btnLoginAdmin">Masuk Admin <i class="fa-solid fa-arrow-right"></i></button>
+            </form>
+        </div>
+    </section>
+
+    <!-- 2. DASHBOARD LAYOUT -->
+    <div id="app-layout" class="hidden">
+        <aside class="sidebar">
+            <div class="logo-area">
+                <div class="logo-icon"><i class="fa-solid fa-layer-group"></i></div>
+                <div class="logo-text">AppSystem</div>
+            </div>
+
+            <ul class="nav-links">
+                <li class="nav-item">
+                    <a class="nav-link active" onclick="navigateTo('dashboard')" id="nav-dashboard">
+                        <i class="fa-solid fa-table-columns"></i> <span>Dashboard</span>
+                    </a>
+                </li>
+                <!-- Menu HUB: Hidden by default, shown by JS based on role -->
+                <li class="nav-item hidden" id="menu-hub-item">
+                    <a class="nav-link" onclick="navigateTo('hub')" id="nav-hub">
+                        <i class="fa-solid fa-truck-fast"></i> <span>Menu HUB</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="navigateTo('settings')" id="nav-settings">
+                        <i class="fa-solid fa-gear"></i> <span>Pengaturan</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="user-profile">
+                <div class="avatar" id="currentUserAvatar">A</div>
+                <div class="user-info">
+                    <h4 id="currentUserName">Admin</h4>
+                    <span id="currentUserRole">Super Admin</span>
+                </div>
+                <div class="logout-btn" onclick="logout()" title="Keluar"><i class="fa-solid fa-right-from-bracket"></i></div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <!-- VIEW: DASHBOARD -->
+            <div id="view-dashboard">
+                <div class="page-header">
+                    <div class="page-title"><h1>Dashboard</h1><p>Ringkasan aktivitas</p></div>
+                </div>
+                <div class="card empty-state">
+                    <i class="fa-regular fa-chart-bar"></i>
+                    <h3>Selamat Datang</h3>
+                    <p id="dashboard-welcome-msg">Halo, selamat bekerja.</p>
+                </div>
+            </div>
+
+            <!-- VIEW: HUB (Serah Terima) -->
+            <div id="view-hub" class="hidden">
+                <div class="page-header no-print">
+                    <div class="page-title"><h1>Operasional HUB</h1><p>Manajemen Serah Terima Paket</p></div>
+                </div>
+
+                <div class="card no-print">
+                    <div class="card-tabs">
+                        <button class="card-tab-btn active" onclick="switchHubTab('serahterima')">Serah Terima (Handover)</button>
+                        <button class="card-tab-btn" onclick="switchHubTab('rekapan')">Rekapan Data</button>
+                    </div>
+
+                    <!-- TAB 1: SERAH TERIMA -->
+                    <div id="tab-serahterima">
+                        <!-- Header Form (Draft Info) -->
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #eee;">
+                            <div class="flex" style="gap: 20px; flex-wrap: wrap;">
+                                <div style="flex:1; min-width: 200px;">
+                                    <label style="font-size:0.85rem; font-weight:600; color:#666;">Pilih Asal HUB</label>
+                                    <select id="hubOriginSelect" class="form-control" onchange="updateDraftHeader()">
+                                        <option value="">-- Pilih HUB --</option>
+                                        <!-- Diisi via JS -->
+                                    </select>
+                                </div>
+                                <div style="flex:1; min-width: 200px;">
+                                    <label style="font-size:0.85rem; font-weight:600; color:#666;">Kode Handover</label>
+                                    <input type="text" id="handoverCodeDisplay" class="form-control" readonly style="background: #e9ecef; font-weight: bold; letter-spacing: 1px;">
+                                </div>
+                                <div style="flex:1; min-width: 200px;">
+                                    <label style="font-size:0.85rem; font-weight:600; color:#666;">Tanggal</label>
+                                    <input type="text" id="currentDateDisplay" class="form-control" readonly style="background: #e9ecef;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Input Paket -->
+                        <div class="flex flex-col gap-10" style="margin-bottom: 20px;">
+                            <h4 style="border-bottom: 2px solid var(--primary-color); display:inline-block; padding-bottom: 5px; margin-bottom:10px;">Input Paket</h4>
+                            
+                            <div class="flex" style="gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+                                <div style="flex: 2; min-width: 250px;">
+                                    <label>No. AWB / Resi</label>
+                                    <div class="input-wrapper">
+                                        <i class="fa-solid fa-barcode"></i>
+                                        <input type="text" id="inputAWB" class="form-control" placeholder="Scan atau ketik AWB..." autofocus>
+                                    </div>
+                                </div>
+                                <div style="flex: 1; min-width: 200px;">
+                                    <label>Remarks / Keterangan</label>
+                                    <select id="inputRemarks" class="form-control" onchange="toggleSpecialInput()">
+                                        <option value="">-- Pilih Remarks --</option>
+                                        <!-- Diisi via JS -->
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Input Khusus (Hidden by default) -->
+                            <div id="specialInputSection" class="hidden" style="background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba;">
+                                <div class="w-full">
+                                    <label>Ciri-ciri Paket <span style="color:red">*</span></label>
+                                    <input type="text" id="inputDesc" class="form-control" placeholder="Warna, bentuk, ukuran (Wajib diisi untuk paket Tanpa AWB)...">
+                                </div>
+                            </div>
+
+                            <button class="btn btn-primary" onclick="addItemToDraft()" style="align-self: flex-start;">
+                                <i class="fa-solid fa-plus"></i> Tambahkan ke Daftar
+                            </button>
+                        </div>
+
+                        <!-- Tabel Draft -->
+                        <h4 style="margin-bottom: 10px;">Daftar Tunggu (Draft)</h4>
+                        <div class="table-container" style="max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px;">
+                            <table>
+                                <thead style="background: #f8f9fa; position: sticky; top: 0;">
+                                    <tr>
+                                        <th>No</th>
+                                        <th>AWB</th>
+                                        <th>Remarks</th>
+                                        <th>Keterangan</th>
+                                        <th>PIC</th>
+                                        <th style="text-align: right;">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="draftTableBody">
+                                    <tr><td colspan="6" class="text-center p-3">Belum ada data di daftar tunggu.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="flex" style="justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                            <button class="btn btn-secondary" onclick="saveDraftToDB()">
+                                <i class="fa-solid fa-floppy-disk"></i> Simpan Draft
+                            </button>
+                            <button class="btn btn-success" onclick="submitHandover()">
+                                <i class="fa-solid fa-paper-plane"></i> Submit & Cetak
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: REKAPAN -->
+                    <div id="tab-rekapan" class="hidden">
+                        <div class="flex" style="justify-content: space-between; margin-bottom: 15px; align-items: center;">
+                            <h3>Rekapan Data</h3>
+                            <button class="btn btn-sm btn-secondary" onclick="loadHistoryData()"><i class="fa-solid fa-rotate"></i> Refresh Data</button>
+                        </div>
+
+                        <!-- CONTAINER FLEX 2 KOLOM -->
+                        <div class="flex" style="gap: 20px; align-items: flex-start;">
+                            
+                            <!-- KOLOM KIRI (30%): SUMMARY HANDOVER -->
+                            <div class="card" style="box-shadow: none; border: 1px solid #eee; flex: 3;">
+                                <h4 style="margin-bottom: 15px; color: var(--primary-color); border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">
+                                    <i class="fa-solid fa-file-contract"></i> Serah terima
+                                </h4>
+                                <div class="table-container" style="max-height: 600px; overflow-y: auto;">
+                                    <table style="font-size: 0.9rem;">
+                                        <thead>
+                                            <tr>
+                                                <th>Tanggal</th>
+                                                <th>Kode</th>
+                                                <th>Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="historySummaryBody">
+                                            <!-- Data via JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- KOLOM KANAN (70%): DETAIL AWB -->
+                            <div class="card" style="box-shadow: none; border: 1px solid #eee; flex: 7;">
+                                <h4 style="margin-bottom: 15px; color: var(--primary-color); border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">
+                                    <i class="fa-solid fa-box-open"></i> Detail AWB
+                                </h4>
+                                <div class="table-container" style="max-height: 600px; overflow-y: auto;">
+                                    <table style="font-size: 0.85rem;">
+                                        <thead>
+                                            <tr>
+                                                <th style="min-width: 100px;">Waktu</th>
+                                                <th style="min-width: 120px;">Kode Handover</th>
+                                                <th style="min-width: 120px;">AWB</th>
+                                                <th style="min-width: 100px;">Remarks HUB</th>
+                                                <th style="min-width: 150px;">Keterangan</th>
+                                                <th style="min-width: 100px;">PIC Handover</th>
+                                                <th style="min-width: 100px;">Status</th>
+                                                <th style="min-width: 100px;">Tgl Kembali</th>
+                                                <th style="min-width: 100px;">Remarks HD</th>
+                                                <th style="min-width: 100px;">PIC HD</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="historyDetailBody">
+                                            <!-- Data via JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hidden Print Section -->
+                <div id="print-area" class="print-only">
+                    <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid black; padding-bottom: 10px;">
+                        <h2>BERITA ACARA SERAH TERIMA (HUB TO HD)</h2>
+                        <h3 id="printHubName">HUB: -</h3>
+                        <p id="printDateCode">Tanggal: - | Kode: -</p>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>AWB</th>
+                                <th>Remarks</th>
+                                <th>Keterangan</th>
+                                <th>PIC</th>
+                            </tr>
+                        </thead>
+                        <tbody id="printTableBody"></tbody>
+                    </table>
+                    <div style="margin-top: 40px; display: flex; justify-content: space-between;">
+                        <div style="text-align: center; width: 200px;">
+                            <p>Diserahkan Oleh (HUB)</p>
+                            <br><br><br>
+                            <p>(__________________)</p>
+                        </div>
+                        <div style="text-align: center; width: 200px;">
+                            <p>Diterima Oleh (HD)</p>
+                            <br><br><br>
+                            <p>(__________________)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: SETTINGS -->
+            <div id="view-settings" class="hidden">
+                <div class="page-header">
+                    <div class="page-title"><h1>Pengaturan</h1></div>
+                </div>
+
+                <!-- Admin Password -->
+                <div class="card" id="adminSettingsPanel" style="display:none;">
+                    <h3>Keamanan Admin</h3>
+                    <div class="flex gap-10 mt-10">
+                        <input type="password" id="newAdminPass" class="form-control" placeholder="Password baru...">
+                        <button class="btn btn-primary" onclick="updateAdminPassword()">Simpan</button>
+                    </div>
+                </div>
+
+                <!-- HUB & Remarks Config -->
+                <div class="flex" style="gap: 20px; flex-wrap: wrap;">
+                    <div class="card" style="flex:1; min-width: 300px;">
+                        <div class="flex" style="justify-content: space-between; margin-bottom:15px;">
+                            <h3>Daftar Nama HUB</h3>
+                            <button class="btn btn-sm btn-primary" onclick="addOption('hubs')"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                        <ul id="hubList" style="list-style: none; padding: 0;"></ul>
+                    </div>
+                    <div class="card" style="flex:1; min-width: 300px;">
+                        <div class="flex" style="justify-content: space-between; margin-bottom:15px;">
+                            <h3>Pilihan Remarks</h3>
+                            <button class="btn btn-sm btn-primary" onclick="addOption('remarks')"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                        <ul id="remarksList" style="list-style: none; padding: 0;"></ul>
+                    </div>
+                </div>
+
+                <!-- User Management -->
+                <div class="card">
+                    <div class="flex" style="justify-content: space-between; margin-bottom:20px;">
+                        <h3>Manajemen User</h3>
+                        <button class="btn btn-primary" onclick="openUserModal()"><i class="fa-solid fa-plus"></i> Tambah</button>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead><tr><th>ID</th><th>Nama</th><th>Role</th><th>Password</th><th>Aksi</th></tr></thead>
+                            <tbody id="userTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL USER -->
+    <div class="modal-overlay" id="userModal">
+        <div class="modal-box">
+            <h3 id="modalTitle">User</h3>
+            <form id="userForm" onsubmit="saveUser(event)" style="margin-top: 15px;">
+                <input type="hidden" id="editDocId">
+                <div class="form-group"><label>ID User</label><input type="text" id="m_iduser" class="form-control" required></div>
+                <div class="form-group"><label>Nama</label><input type="text" id="m_nama" class="form-control" required></div>
+                <div class="form-group"><label>Password</label><input type="text" id="m_password" class="form-control" required></div>
+                <div class="form-group">
+                    <label>Role</label>
+                    <select id="m_role" class="form-control">
+                        <option value="Tim HUB">Tim HUB</option>
+                        <option value="Tim HD">Tim HD</option>
+                        <option value="Visitor">Visitor</option>
+                        <option value="Admin">Admin (User)</option>
+                    </select>
+                </div>
+                <div class="flex" style="justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('userModal')">Batal</button>
+                    <button type="submit" class="btn btn-primary" id="btnSaveUser">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPT -->
+    <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { 
-            getFirestore, collection, doc, setDoc, getDoc, getDocs, 
-            query, onSnapshot, addDoc, updateDoc, writeBatch, deleteDoc, serverTimestamp, 
-            orderBy, where, limit 
-        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where, onSnapshot, setDoc, getDoc, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // --- REACT HOOKS DESTRUCTURING (FIXED) ---
-        const { useState, useEffect, useMemo } = React;
-
-        // --- FIREBASE CONFIGURATION ---
         const firebaseConfig = {
             apiKey: "AIzaSyAZFpX5OxSVIG7f58U60dVJHufHORFQuIg",
             authDomain: "hub-dashboard-92428.firebaseapp.com",
@@ -55,1240 +544,640 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
         const auth = getAuth(app);
-        // Menggunakan ID unik agar data tidak tercampur dengan user lain di firestore yang sama
-        const APP_ID = 'hub-hd-prod-v1'; 
+        const db = getFirestore(app);
 
-        // --- ICONS (Lucide Wrapper) ---
-        const Icon = ({ name, size = 20, className = "" }) => {
-            useEffect(() => {
-                lucide.createIcons();
-            }, [name]);
-            return <i data-lucide={name} className={className} style={{ width: size, height: size }}></i>;
+        let currentUser = null;
+        let unsubscribeUsers = null;
+        let currentDraftItems = []; // Menyimpan item sementara
+        let currentDraftId = null; // ID dokumen di Firestore jika sudah disimpan
+
+        // INIT
+        function initApp() {
+            document.getElementById('auth-loading').classList.remove('hidden');
+            signInAnonymously(auth).then(async () => {
+                document.getElementById('auth-loading').classList.add('hidden');
+                // Init settings doc if not exists
+                const settingsRef = doc(db, 'settings', 'options');
+                const snap = await getDoc(settingsRef);
+                if (!snap.exists()) {
+                    await setDoc(settingsRef, { 
+                        hubs: ['HUB Jakarta', 'HUB Bandung'],
+                        remarks: ['Rusak', 'Hilang', 'Tanpa AWB', 'Retur']
+                    });
+                }
+                loadSettingsOptions();
+            }).catch(e => console.error(e));
+        }
+        initApp();
+
+        // --- AUTH & NAVIGATION ---
+        window.switchLoginTab = (t) => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('form-user').classList.toggle('hidden', t !== 'user');
+            document.getElementById('form-admin').classList.toggle('hidden', t !== 'admin');
         };
 
-        // --- UI COMPONENTS ---
-        const Card = ({ children, className = "" }) => (
-            <div className={`bg-white rounded-xl shadow-sm border border-slate-200 ${className}`}>
-                {children}
-            </div>
-        );
+        window.handleLogin = async (e, type) => {
+            e.preventDefault();
+            const btn = type === 'user' ? document.getElementById('btnLoginUser') : document.getElementById('btnLoginAdmin');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
 
-        const Button = ({ children, onClick, variant = "primary", className = "", disabled = false, type = "button" }) => {
-            const variants = {
-                primary: "bg-blue-600 text-white hover:bg-blue-700",
-                secondary: "bg-slate-100 text-slate-700 hover:bg-slate-200",
-                danger: "bg-red-500 text-white hover:bg-red-600",
-                success: "bg-emerald-500 text-white hover:bg-emerald-600",
-                outline: "border border-slate-300 text-slate-600 hover:bg-slate-50"
-            };
-            return (
-                <button 
-                    type={type}
-                    disabled={disabled}
-                    onClick={onClick} 
-                    className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${variants[variant]} ${className}`}
-                >
-                    {children}
-                </button>
-            );
+            try {
+                if (type === 'admin') {
+                    const pass = document.getElementById('adminPassInput').value;
+                    const snap = await getDoc(doc(db, 'settings', 'admin_auth'));
+                    if (snap.exists() && snap.data().password === pass) {
+                        loginSuccess({ nama: 'Administrator', role: 'Admin', id: 'SYSTEM' });
+                    } else showToast('Password Salah', 'error');
+                } else {
+                    const id = document.getElementById('userIdInput').value;
+                    const pass = document.getElementById('userPassInput').value;
+                    const q = query(collection(db, 'users'), where('idUser', '==', id), where('password', '==', pass));
+                    const snap = await getDocs(q);
+                    if (!snap.empty) {
+                        const d = snap.docs[0].data(); d.docId = snap.docs[0].id;
+                        loginSuccess(d);
+                    } else showToast('User tidak ditemukan', 'error');
+                }
+            } catch (err) { showToast(err.message, 'error'); } 
+            finally { btn.innerHTML = 'Masuk'; btn.disabled = false; }
         };
 
-        const Input = ({ label, value, onChange, placeholder, type = "text", className = "" }) => (
-            <div className={`flex flex-col gap-1 ${className}`}>
-                {label && <label className="text-sm font-semibold text-slate-600">{label}</label>}
-                <input 
-                    type={type}
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    placeholder={placeholder}
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all w-full"
-                />
-            </div>
-        );
+        function loginSuccess(user) {
+            currentUser = user;
+            showToast(`Halo, ${user.nama}`);
+            document.getElementById('currentUserName').innerText = user.nama;
+            document.getElementById('currentUserRole').innerText = user.role;
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('app-layout').classList.remove('hidden');
+            document.getElementById('adminSettingsPanel').style.display = user.id === 'SYSTEM' ? 'block' : 'none';
 
-        const Toast = ({ message, type, onClose }) => (
-            <div className={`fixed bottom-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border animate-bounce ${
-                type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'
-            }`}>
-                <Icon name={type === 'success' ? 'check-circle-2' : 'alert-circle'} size={20} />
-                <span className="font-medium">{message}</span>
-                <button onClick={onClose}><Icon name="x" size={16} /></button>
-            </div>
-        );
-
-        // --- MAIN APP ---
-        function App() {
-            const [currentUser, setCurrentUser] = useState(null); // { username, role, name, id }
-            const [activeTab, setActiveTab] = useState('dashboard');
-            const [toast, setToast] = useState(null);
-            const [remarksList, setRemarksList] = useState(['Rusak', 'Salah Rute', 'Retur', 'Tanpa AWB', 'Packing Ulang']);
-            const [packages, setPackages] = useState([]);
-            const [handovers, setHandovers] = useState([]);
-            const [loading, setLoading] = useState(true);
-
-            // Init & Fetch Data
-            useEffect(() => {
-                const initSystem = async () => {
-                    // Login anonymous ke firebase agar bisa baca/tulis DB (Rule backend)
-                    await signInAnonymously(auth);
-                    
-                    // Cek Local Storage Session
-                    const savedUser = localStorage.getItem('app_user');
-                    if (savedUser) {
-                        setCurrentUser(JSON.parse(savedUser));
-                    }
-                    setLoading(false);
-                };
-                initSystem();
-            }, []);
-
-            // Realtime Listeners
-            useEffect(() => {
-                if (!currentUser) return;
-
-                const qPackages = query(collection(db, 'artifacts', APP_ID, 'public', 'data', 'packages'), orderBy('created_at', 'desc'));
-                const unsubPackages = onSnapshot(qPackages, (snap) => {
-                    setPackages(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-                });
-
-                const qHandovers = query(collection(db, 'artifacts', APP_ID, 'public', 'data', 'handovers'), orderBy('timestamp', 'desc'));
-                const unsubHandovers = onSnapshot(qHandovers, (snap) => {
-                    setHandovers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-                });
-
-                const docSettings = doc(db, 'artifacts', APP_ID, 'public', 'data', 'settings', 'config');
-                const unsubSettings = onSnapshot(docSettings, (doc) => {
-                    if (doc.exists()) {
-                        setRemarksList(doc.data().hub_remarks || []);
-                    }
-                });
-
-                return () => {
-                    unsubPackages();
-                    unsubHandovers();
-                    unsubSettings();
-                };
-            }, [currentUser]);
-
-            const showToast = (message, type = 'success') => {
-                setToast({ message, type });
-                setTimeout(() => setToast(null), 3000);
-            };
-
-            const handleLogout = () => {
-                localStorage.removeItem('app_user');
-                setCurrentUser(null);
-                setActiveTab('dashboard');
-            };
-
-            if (loading) return <div className="h-screen flex items-center justify-center text-slate-500">Memuat Sistem...</div>;
-
-            if (!currentUser) {
-                return <LoginView onLogin={(user) => {
-                    setCurrentUser(user);
-                    localStorage.setItem('app_user', JSON.stringify(user));
-                    showToast(`Selamat datang, ${user.name}`);
-                }} showToast={showToast} />;
+            // Role Access for HUB Menu
+            if (['Admin', 'Tim HUB'].includes(user.role)) {
+                document.getElementById('menu-hub-item').classList.remove('hidden');
+            } else {
+                document.getElementById('menu-hub-item').classList.add('hidden');
             }
 
-            return (
-                <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
-                    <Sidebar 
-                        role={currentUser.role} 
-                        name={currentUser.name} 
-                        activeTab={activeTab} 
-                        setActiveTab={setActiveTab} 
-                        onLogout={handleLogout} 
-                    />
-
-                    <main className="flex-1 p-4 md:p-8 overflow-y-auto max-h-screen no-scrollbar">
-                        <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
-                                <h2 className="text-2xl font-bold text-slate-800 capitalize">{activeTab.replace('-', ' ')}</h2>
-                                <p className="text-slate-500 text-sm">Sistem Validasi Handover HUB & HD</p>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-slate-500 bg-white px-4 py-2 rounded-lg border border-slate-200">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                Sistem Online
-                            </div>
-                        </header>
-
-                        {activeTab === 'dashboard' && <DashboardView packages={packages} handovers={handovers} />}
-                        {/* UPDATE: Menambahkan prop handovers ke HubInputView agar bisa hitung nomor urut */}
-                        {activeTab === 'hub-input' && <HubInputView remarks={remarksList} showToast={showToast} currentUser={currentUser} handovers={handovers} />}
-                        {activeTab === 'hd-input' && <HdInputView packages={packages} showToast={showToast} currentUser={currentUser} />}
-                        {activeTab === 'surat-jalan' && <SuratJalanList handovers={handovers} />}
-                        {activeTab === 'settings' && <SettingsView remarks={remarksList} setRemarks={setRemarksList} showToast={showToast} currentUser={currentUser} />}
-                    </main>
-
-                    {toast && <Toast {...toast} onClose={() => setToast(null)} />}
-                </div>
-            );
+            startUserListener();
+            window.navigateTo('dashboard');
         }
 
-        // --- LOGIN VIEW ---
-        function LoginView({ onLogin, showToast }) {
-            const [username, setUsername] = useState("");
-            const [password, setPassword] = useState("");
-            const [isChecking, setIsChecking] = useState(false);
-
-            const handleSubmit = async (e) => {
-                e.preventDefault();
-                setIsChecking(true);
-
-                try {
-                    const usersRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'users');
-                    const q = query(usersRef);
-                    const snapshot = await getDocs(q);
-
-                    // --- INITIAL SETUP (First Time Run) ---
-                    if (snapshot.empty) {
-                        // Create Default Admin if no users exist
-                        if (username === 'admin' && password === 'admin') {
-                            const defaultUser = {
-                                username: 'admin',
-                                password: 'admin', // In real app, hash this!
-                                role: 'admin',
-                                name: 'Super Admin',
-                                created_at: serverTimestamp()
-                            };
-                            await addDoc(usersRef, defaultUser);
-                            onLogin({ ...defaultUser, id: 'init_admin' });
-                            return;
-                        } else {
-                            showToast("Database kosong. Gunakan user: admin, pass: admin", "error");
-                            setIsChecking(false);
-                            return;
-                        }
-                    }
-
-                    // --- NORMAL LOGIN ---
-                    // Note: Filtering on client side because Firestore case-sensitivity & simple password check
-                    const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    const foundUser = users.find(u => u.username === username && u.password === password);
-
-                    if (foundUser) {
-                        onLogin(foundUser);
-                    } else {
-                        showToast("Username atau Password salah", "error");
-                    }
-
-                } catch (err) {
-                    console.error(err);
-                    showToast("Terjadi kesalahan koneksi", "error");
-                } finally {
-                    setIsChecking(false);
-                }
-            };
-
-            return (
-                <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-                    <div className="max-w-md w-full bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-2xl">
-                        <div className="text-center mb-8">
-                            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-blue-500/20">
-                                <Icon name="package-search" size={32} className="text-white" />
-                            </div>
-                            <h1 className="text-2xl font-bold text-white">VAL-PAKET Login</h1>
-                            <p className="text-slate-400 mt-2 text-sm">Masukkan kredensial Anda</p>
-                        </div>
-
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div>
-                                <label className="text-slate-400 text-sm font-medium mb-1 block">Username</label>
-                                <input 
-                                    type="text" 
-                                    value={username} 
-                                    onChange={e => setUsername(e.target.value)}
-                                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                                    placeholder="Masukkan username"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="text-slate-400 text-sm font-medium mb-1 block">Password</label>
-                                <input 
-                                    type="password" 
-                                    value={password} 
-                                    onChange={e => setPassword(e.target.value)}
-                                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                                    placeholder="Masukkan password"
-                                    required
-                                />
-                            </div>
-                            <Button type="submit" className="w-full py-3 mt-4" disabled={isChecking}>
-                                {isChecking ? "Memeriksa..." : "Masuk Sistem"}
-                            </Button>
-                        </form>
-                    </div>
-                </div>
-            );
-        }
-
-        // --- COMPONENT: SIDEBAR ---
-        function Sidebar({ role, name, activeTab, setActiveTab, onLogout }) {
-            const NavItem = ({ icon, label, id, visible }) => {
-                if (!visible) return null;
-                return (
-                    <button 
-                        onClick={() => setActiveTab(id)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium w-full text-left ${
-                            activeTab === id
-                                ? "bg-blue-600 text-white shadow-lg shadow-blue-900/20" 
-                                : "text-slate-400 hover:text-white hover:bg-slate-800"
-                        }`}
-                    >
-                        <Icon name={icon} size={20}/>
-                        <span>{label}</span>
-                    </button>
-                );
-            };
-
-            return (
-                <aside className="w-full md:w-64 bg-slate-900 text-white flex flex-col no-print">
-                    <div className="p-6 border-b border-slate-800">
-                        <h1 className="text-xl font-bold flex items-center gap-2">
-                            <Icon name="package-search" className="text-blue-400" />
-                            VAL-PAKET
-                        </h1>
-                    </div>
-                    
-                    <nav className="flex-1 p-4 flex flex-col gap-2">
-                        <NavItem icon="layout-dashboard" label="Dashboard" id="dashboard" visible={true} />
-                        <NavItem icon="plus" label="Input HUB" id="hub-input" visible={role === 'admin' || role === 'hub'} />
-                        <NavItem icon="truck" label="Input HD" id="hd-input" visible={role === 'admin' || role === 'hd'} />
-                        <NavItem icon="file-text" label="Surat Jalan" id="surat-jalan" visible={true} />
-                        <NavItem icon="settings" label="Pengaturan" id="settings" visible={role === 'admin'} />
-                    </nav>
-
-                    <div className="p-4 border-t border-slate-800">
-                        <div className="flex items-center gap-3 mb-4 px-2">
-                            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-xs font-bold uppercase">
-                                {role[0]}
-                            </div>
-                            <div className="overflow-hidden">
-                                <p className="text-sm font-medium truncate">{name}</p>
-                                <p className="text-xs text-slate-400 capitalize">{role}</p>
-                            </div>
-                        </div>
-                        <button 
-                            onClick={onLogout}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
-                        >
-                            <Icon name="log-out" size={18} /> <span>Keluar</span>
-                        </button>
-                    </div>
-                </aside>
-            );
-        }
-
-        // --- COMPONENT: DASHBOARD ---
-        function DashboardView({ packages }) {
-            const stats = useMemo(() => ({
-                total: packages.length,
-                diHd: packages.filter(p => p.status_paket === 'Di HD').length,
-                kembali: packages.filter(p => p.status_paket === 'Kembali ke HUB').length,
-                anomali: packages.filter(p => p.status_paket === 'Anomali HD').length,
-            }), [packages]);
-
-            const StatCard = ({ title, value, icon, color }) => {
-                const bgColors = { blue: "bg-blue-50", amber: "bg-amber-50", emerald: "bg-emerald-50", red: "bg-red-50" };
-                const textColors = { blue: "text-blue-500", amber: "text-amber-500", emerald: "text-emerald-500", red: "text-red-500" };
-                return (
-                    <Card className="p-6 flex items-center justify-between">
-                        <div>
-                            <p className="text-sm font-medium text-slate-500 mb-1">{title}</p>
-                            <p className="text-3xl font-bold text-slate-800">{value}</p>
-                        </div>
-                        <div className={`p-4 rounded-xl ${bgColors[color]}`}>
-                            <Icon name={icon} className={textColors[color]} size={24} />
-                        </div>
-                    </Card>
-                );
-            };
-
-            const StatusBadge = ({ status }) => {
-                const styles = {
-                    "Di HD": "bg-amber-100 text-amber-700 border-amber-200",
-                    "Kembali ke HUB": "bg-emerald-100 text-emerald-700 border-emerald-200",
-                    "Anomali HD": "bg-red-100 text-red-700 border-red-200",
-                    "Cek Kembali": "bg-slate-100 text-slate-700 border-slate-200"
-                };
-                return <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase border ${styles[status]}`}>{status}</span>;
-            };
-
-            return (
-                <div className="space-y-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <StatCard title="Total Paket" value={stats.total} icon="package-search" color="blue" />
-                        <StatCard title="Ada di HD" value={stats.diHd} icon="truck" color="amber" />
-                        <StatCard title="Sudah Kembali" value={stats.kembali} icon="check-circle-2" color="emerald" />
-                        <StatCard title="Anomali / Tanpa AWB" value={stats.anomali} icon="alert-circle" color="red" />
-                    </div>
-
-                    <Card className="overflow-hidden">
-                        <div className="p-4 border-b border-slate-100 font-bold text-slate-700">Aktivitas Paket Terbaru</div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-50 text-slate-500 uppercase text-xs font-semibold">
-                                    <tr>
-                                        <th className="px-6 py-4">AWB / Keterangan</th>
-                                        <th className="px-6 py-4">Status</th>
-                                        <th className="px-6 py-4">Tgl Kirim</th>
-                                        <th className="px-6 py-4">Remarks HUB</th>
-                                        <th className="px-6 py-4">Sender</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {packages.slice(0, 10).map((p) => (
-                                        <tr key={p.id} className="hover:bg-slate-50/50">
-                                            <td className="px-6 py-4 font-mono font-medium text-slate-700">
-                                                {p.awb || <span className="text-slate-400 italic">Non-AWB: {p.keterangan_fisik}</span>}
-                                            </td>
-                                            <td className="px-6 py-4"><StatusBadge status={p.status_paket} /></td>
-                                            <td className="px-6 py-4 text-slate-500">
-                                                {p.tanggal_kirim?.toDate?.().toLocaleDateString('id-ID')}
-                                            </td>
-                                            <td className="px-6 py-4"><span className="bg-slate-100 px-2 py-1 rounded text-xs">{p.remarks_hub}</span></td>
-                                            <td className="px-6 py-4 text-slate-500">{p.pengirim_hub}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            {packages.length === 0 && <div className="p-10 text-center text-slate-400">Belum ada data paket.</div>}
-                        </div>
-                    </Card>
-                </div>
-            );
-        }
-
-        // --- COMPONENT: HUB INPUT ---
-        // Helper: Custom Modal Konfirmasi
-        const ConfirmModal = ({ isOpen, data, onClose }) => {
-            if (!isOpen) return null;
-            return (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4 animate-in fade-in zoom-in duration-200">
-                    <Card className="w-full max-w-sm p-6 shadow-2xl border-0">
-                        <div className="flex flex-col items-center text-center gap-4">
-                            <div className={`p-4 rounded-full ${data.type === 'danger' ? 'bg-red-100 text-red-600' : data.type === 'success' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}`}>
-                                <Icon name={data.type === 'danger' ? 'alert-triangle' : data.type === 'success' ? 'check' : 'info'} size={32} />
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-lg text-slate-800">{data.title}</h3>
-                                <p className="text-slate-500 text-sm mt-1">{data.message}</p>
-                            </div>
-                            <div className="flex gap-3 w-full mt-2">
-                                <Button variant="secondary" onClick={onClose} className="flex-1">{data.cancelLabel || "Batal"}</Button>
-                                <Button variant={data.type === 'danger' ? 'danger' : 'primary'} onClick={data.onConfirm} className="flex-1">{data.confirmLabel || "Ya, Lanjutkan"}</Button>
-                            </div>
-                        </div>
-                    </Card>
-                </div>
-            );
+        window.logout = () => {
+            if(unsubscribeUsers) unsubscribeUsers();
+            currentUser = null;
+            document.getElementById('app-layout').classList.add('hidden');
+            document.getElementById('login-section').classList.remove('hidden');
+            document.getElementById('form-user').reset();
+            document.getElementById('form-admin').reset();
         };
 
-        // Helper: Modal Cetak Surat Jalan (Reusable)
-        const SuratJalanPrintModal = ({ data, onClose }) => {
-            if (!data) return null;
+        window.navigateTo = (page) => {
+            ['dashboard', 'hub', 'settings'].forEach(p => {
+                document.getElementById(`view-${p}`).classList.add('hidden');
+                const nav = document.getElementById(`nav-${p}`);
+                if(nav) nav.classList.remove('active');
+            });
+            document.getElementById(`view-${page}`).classList.remove('hidden');
+            const activeNav = document.getElementById(`nav-${page}`);
+            if(activeNav) activeNav.classList.add('active');
 
-            // UPDATE: Auto-print saat modal terbuka
-            useEffect(() => {
-                const timer = setTimeout(() => {
-                    window.print();
-                }, 500); // Delay sedikit untuk memastikan render selesai
-                return () => clearTimeout(timer);
-            }, []);
-
-            // Helper untuk menangani format data lama (string) dan baru (object)
-            const getRowData = (item) => {
-                if (typeof item === 'string') {
-                    // Jika data lama (hanya string), coba parsing manual atau tampilkan apa adanya
-                    if (item.startsWith("Non-AWB:")) {
-                        return { awb: "-", remarks: "Tanpa AWB", description: item.replace("Non-AWB:", "").trim() };
-                    }
-                    return { awb: item, remarks: "-", description: "-" };
-                }
-                // Jika data baru (object)
-                return {
-                    awb: item.awb || "-",
-                    remarks: item.remarks || "-",
-                    description: item.description || "-"
-                };
-            };
-
-            return (
-                <div className="fixed inset-0 z-[80] bg-slate-900/50 flex items-center justify-center p-4 overflow-y-auto">
-                    {/* INJECTED PRINT STYLES */}
-                    <style>{`
-                        @media print {
-                            @page { size: landscape; margin: 0.5cm; }
-                            body { visibility: hidden; }
-                            .print-modal-content {
-                                visibility: visible;
-                                position: absolute;
-                                left: 0;
-                                top: 0;
-                                width: 100% !important;
-                                max-width: none !important;
-                                margin: 0 !important;
-                                padding: 20px !important;
-                                box-shadow: none !important;
-                                border: none !important;
-                            }
-                            .print-modal-content * { visibility: visible; }
-                            .no-print { display: none !important; }
-                        }
-                    `}</style>
-
-                    <Card className="max-w-[90%] w-full p-8 bg-white relative my-8 print-modal-content">
-                        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 no-print">
-                            <Icon name="x" size={24} />
-                        </button>
-                        
-                        <div className="p-4 space-y-6">
-                            {/* KOP SURAT */}
-                            <div className="flex justify-between items-start border-b-4 border-slate-800 pb-4 mb-6">
-                                <div>
-                                    <h2 className="text-3xl font-black uppercase tracking-wider text-slate-800">FORM SERAH TERIMA</h2>
-                                </div>
-                                <div className="text-right">
-                                    <p className="font-mono text-xl font-bold text-slate-800">{data.id}</p>
-                                    <p className="text-xs text-slate-500 italic mt-1">Dicetak: {new Date().toLocaleString('id-ID')}</p>
-                                </div>
-                            </div>
-
-                            {/* INFO PENGIRIMAN */}
-                            <div className="flex justify-between bg-slate-50 p-4 rounded-lg border border-slate-200">
-                                <div>
-                                    <table className="text-sm">
-                                        <tbody>
-                                            <tr><td className="pr-4 py-1 text-slate-500 font-medium">Dari:</td><td className="font-bold uppercase">{data.sender}</td></tr>
-                                            <tr><td className="pr-4 py-1 text-slate-500 font-medium">Tipe:</td><td className="font-bold uppercase">{data.type}</td></tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-xs font-bold text-slate-500 uppercase">Total Muatan</p>
-                                    <p className="text-3xl font-black text-slate-800">{data.total_items} <span className="text-sm font-medium text-slate-500">Item</span></p>
-                                </div>
-                            </div>
-
-                            {/* TABEL RINCIAN */}
-                            <div className="mt-6">
-                                <h3 className="font-bold text-slate-800 mb-2 uppercase text-xs tracking-wider border-l-4 border-blue-600 pl-2">Rincian Paket</h3>
-                                <table className="w-full text-left text-sm border-collapse border border-slate-300">
-                                    <thead className="bg-slate-100 text-slate-700 text-xs uppercase font-bold text-center">
-                                        <tr>
-                                            <th className="border border-slate-300 px-2 py-2 w-12">No</th>
-                                            <th className="border border-slate-300 px-2 py-2">Resi (AWB)</th>
-                                            <th className="border border-slate-300 px-2 py-2">Remarks</th>
-                                            <th className="border border-slate-300 px-2 py-2">Ciri-ciri Fisik / Ket</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="text-slate-700">
-                                        {data.items?.map((itemRaw, i) => {
-                                            const item = getRowData(itemRaw);
-                                            return (
-                                                <tr key={i} className="even:bg-slate-50">
-                                                    <td className="border border-slate-300 px-2 py-1.5 text-center">{i + 1}</td>
-                                                    <td className="border border-slate-300 px-2 py-1.5 font-mono font-medium">{item.awb}</td>
-                                                    <td className="border border-slate-300 px-2 py-1.5 text-center">{item.remarks}</td>
-                                                    <td className="border border-slate-300 px-2 py-1.5">{item.description}</td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* TANDA TANGAN */}
-                            <div className="grid grid-cols-3 gap-8 pt-16 mt-8">
-                                <div className="text-center">
-                                    <p className="text-xs mb-16 font-medium uppercase">Dibuat Oleh,</p>
-                                    <p className="font-bold underline uppercase">{data.sender}</p>
-                                </div>
-                                <div className="text-center">
-                                    <p className="text-xs mb-16 font-medium uppercase">Driver / Kurir,</p>
-                                    <p className="font-bold border-b border-slate-800 inline-block min-w-[120px]">&nbsp;</p>
-                                </div>
-                                <div className="text-center">
-                                    <p className="text-xs mb-16 font-medium uppercase">Diterima Oleh,</p>
-                                    <p className="font-bold border-b border-slate-800 inline-block min-w-[120px]">&nbsp;</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div className="mt-8 pt-4 border-t border-slate-200 flex justify-end gap-3 no-print">
-                            <Button onClick={() => window.print()} variant="primary" className="bg-slate-800 hover:bg-slate-900">
-                                <Icon name="printer" size={18} /> Cetak Ulang
-                            </Button>
-                            <Button onClick={onClose} variant="secondary">Tutup</Button>
-                        </div>
-                    </Card>
-                </div>
-            );
+            if (page === 'hub') {
+                initHubPage();
+            }
         };
 
-        function HubInputView({ remarks, showToast, currentUser, handovers }) {
-            const [scannedList, setScannedList] = useState([]);
-            const [currentAwb, setCurrentAwb] = useState("");
-            const [currentRemark, setCurrentRemark] = useState(remarks[0]);
-            const [currentKeterangan, setCurrentKeterangan] = useState("");
-            const [isSubmitting, setIsSubmitting] = useState(false);
-            const [confirmState, setConfirmState] = useState({ isOpen: false, title: "", message: "", type: "info", confirmLabel: "", cancelLabel: "", onConfirm: () => {} });
-            const [editState, setEditState] = useState({ isOpen: false, item: null, form: { awb: "", remarks_hub: "", keterangan_fisik: "" } });
-            const [printData, setPrintData] = useState(null);
+        // --- HUB LOGIC ---
+        window.switchHubTab = (tab) => {
+            document.querySelectorAll('.card-tab-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('tab-serahterima').classList.toggle('hidden', tab !== 'serahterima');
+            document.getElementById('tab-rekapan').classList.toggle('hidden', tab !== 'rekapan');
+            if(tab === 'rekapan') loadHistoryData();
+        };
 
-            // LOGIKA GENERATE NOMOR HANDOVER (DDMMYYYY-XXXX)
-            const generatedHandoverId = useMemo(() => {
-                const today = new Date();
-                const dd = String(today.getDate()).padStart(2, '0');
-                const mm = String(today.getMonth() + 1).padStart(2, '0');
-                const yyyy = today.getFullYear();
-                const datePrefix = `${dd}${mm}${yyyy}`;
-                
-                // Filter handover yang dibuat hari ini (berdasarkan prefix ID yang mengandung tanggal ini)
-                // Asumsi ID disimpan dengan format yang sama
-                const countToday = handovers.filter(h => h.id.startsWith(datePrefix)).length;
-                const nextSequence = String(countToday + 1).padStart(4, '0');
-                
-                return `${datePrefix}-${nextSequence}`;
-            }, [handovers]);
+        async function initHubPage() {
+            // Load Date
+            const today = new Date();
+            const dd = String(today.getDate()).padStart(2, '0');
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const yyyy = today.getFullYear();
+            const dateStr = `${dd}/${mm}/${yyyy}`;
+            document.getElementById('currentDateDisplay').value = dateStr;
 
-            const currentDateStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            // Load Options from settings
+            await loadSettingsOptions();
 
-            const addPackageToList = (e) => {
-                e.preventDefault();
-                if (!currentAwb && !currentKeterangan) return;
-                
-                if (currentAwb && scannedList.some(i => i.awb === currentAwb)) {
-                    showToast("AWB ini sudah ada dalam daftar sementara", "error");
-                    return;
-                }
-
-                const newItem = {
-                    temp_id: Math.random().toString(36).substr(2, 9),
-                    awb: currentAwb.trim(),
-                    remarks_hub: currentRemark,
-                    keterangan_fisik: currentKeterangan,
-                    status_paket: "Di HD",
-                    tanggal_kirim: new Date(),
-                    pengirim_hub: currentUser.name
-                };
-
-                setScannedList([newItem, ...scannedList]);
-                setCurrentAwb("");
-                setCurrentKeterangan("");
-            };
-
-            const triggerDelete = (id) => {
-                setConfirmState({
-                    isOpen: true,
-                    title: "Hapus Item?",
-                    message: "Item ini akan dihapus dari daftar antrian handover. Lanjutkan?",
-                    type: "danger",
-                    confirmLabel: "Hapus",
-                    onConfirm: () => {
-                        setScannedList(prev => prev.filter(i => i.temp_id !== id));
-                        setConfirmState(prev => ({ ...prev, isOpen: false }));
-                        showToast("Item berhasil dihapus");
-                    }
-                });
-            };
-
-            const triggerEdit = (item) => {
-                setConfirmState({
-                    isOpen: true,
-                    title: "Edit Item?",
-                    message: "Anda akan mengubah data item ini. Lanjutkan?",
-                    type: "info",
-                    onConfirm: () => {
-                        setEditState({
-                            isOpen: true,
-                            item: item,
-                            form: { awb: item.awb, remarks_hub: item.remarks_hub, keterangan_fisik: item.keterangan_fisik || "" }
-                        });
-                        setConfirmState(prev => ({ ...prev, isOpen: false }));
-                    }
-                });
-            };
-
-            const saveEdit = () => {
-                setScannedList(prev => prev.map(p => {
-                    if (p.temp_id === editState.item.temp_id) {
-                        return { ...p, ...editState.form };
-                    }
-                    return p;
-                }));
-                setEditState({ isOpen: false, item: null, form: {} });
-                showToast("Data berhasil diperbarui");
-            };
-
-            const submitHandover = async () => {
-                if (scannedList.length === 0) return;
-                setIsSubmitting(true);
-                
-                try {
-                    const batch = writeBatch(db);
-                    // GUNAKAN ID YANG SUDAH DIGENERATE
-                    const handoverId = generatedHandoverId;
-                    
-                    const handoverRef = doc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'handovers'), handoverId);
-                    
-                    const detailedItems = scannedList.map(i => ({
-                        awb: i.awb || "-",
-                        remarks: i.remarks_hub || "-",
-                        description: i.keterangan_fisik || "-"
-                    }));
-
-                    const handoverData = {
-                        id: handoverId,
-                        type: 'HUB-HD',
-                        sender: currentUser.name,
-                        total_items: scannedList.length,
-                        timestamp: { toDate: () => new Date() },
-                        items: detailedItems
-                    };
-
-                    batch.set(handoverRef, {
-                        ...handoverData,
-                        timestamp: serverTimestamp()
-                    });
-
-                    scannedList.forEach(item => {
-                        const pkgRef = doc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'packages'));
-                        const { temp_id, ...dataToSave } = item;
-                        batch.set(pkgRef, {
-                            ...dataToSave,
-                            handover_id: handoverId,
-                            created_at: serverTimestamp()
-                        });
-                    });
-
-                    await batch.commit();
-                    showToast(`Berhasil menyimpan ${scannedList.length} paket`);
-                    setScannedList([]);
-
-                    setConfirmState({
-                        isOpen: true,
-                        title: "Simpan Berhasil",
-                        message: "Data tersimpan. Cetak Surat Jalan sekarang?",
-                        type: "success",
-                        confirmLabel: "Cetak & Preview",
-                        cancelLabel: "Nanti",
-                        onConfirm: () => {
-                            setPrintData(handoverData);
-                            setConfirmState(prev => ({ ...prev, isOpen: false }));
-                        }
-                    });
-
-                } catch (err) {
-                    console.error(err);
-                    showToast("Gagal menyimpan data", "error");
-                } finally {
-                    setIsSubmitting(false);
-                }
-            };
-
-            return (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative">
-                    {/* MODAL KONFIRMASI & CETAK & EDIT (Tetap sama) */}
-                    <ConfirmModal 
-                        isOpen={confirmState.isOpen} 
-                        data={confirmState} 
-                        onClose={() => setConfirmState(prev => ({ ...prev, isOpen: false }))} 
-                    />
-                    <SuratJalanPrintModal 
-                        data={printData} 
-                        onClose={() => setPrintData(null)} 
-                    />
-                    {editState.isOpen && (
-                        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 animate-in fade-in zoom-in duration-200">
-                            <Card className="w-full max-w-md p-6 shadow-2xl">
-                                <h3 className="font-bold text-lg mb-4 text-slate-800 border-b pb-2 flex justify-between items-center">
-                                    Edit Data Paket
-                                    <button onClick={() => setEditState({ ...editState, isOpen: false })}><Icon name="x" size={20} /></button>
-                                </h3>
-                                <div className="space-y-4">
-                                    <Input 
-                                        label="AWB" 
-                                        value={editState.form.awb} 
-                                        onChange={(val) => setEditState(prev => ({ ...prev, form: { ...prev.form, awb: val } }))} 
-                                    />
-                                    <div className="flex flex-col gap-1">
-                                        <label className="text-sm font-semibold text-slate-600">Remarks</label>
-                                        <select 
-                                            value={editState.form.remarks_hub}
-                                            onChange={(e) => setEditState(prev => ({ ...prev, form: { ...prev.form, remarks_hub: e.target.value } }))}
-                                            className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none w-full"
-                                        >
-                                            {remarks.map(r => <option key={r} value={r}>{r}</option>)}
-                                        </select>
-                                    </div>
-                                    <Input 
-                                        label="Keterangan Fisik" 
-                                        value={editState.form.keterangan_fisik} 
-                                        onChange={(val) => setEditState(prev => ({ ...prev, form: { ...prev.form, keterangan_fisik: val } }))} 
-                                    />
-                                    <div className="flex justify-end gap-2 mt-6">
-                                        <Button variant="secondary" onClick={() => setEditState({ ...editState, isOpen: false })}>Batal</Button>
-                                        <Button onClick={saveEdit}>Simpan Perubahan</Button>
-                                    </div>
-                                </div>
-                            </Card>
-                        </div>
-                    )}
-
-                    <div className="lg:col-span-4 space-y-6">
-                        <Card className="p-6">
-                            <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
-                                <Icon name="plus" size={18} className="text-blue-500" />
-                                Scan / Input Paket
-                            </h3>
-                            <form onSubmit={addPackageToList} className="space-y-4">
-                                <Input label="Scan AWB" value={currentAwb} onChange={setCurrentAwb} placeholder="Tembak Barcode..." />
-                                <div className="flex flex-col gap-1">
-                                    <label className="text-sm font-semibold text-slate-600">Remarks HUB</label>
-                                    <select 
-                                        value={currentRemark}
-                                        onChange={(e) => setCurrentRemark(e.target.value)}
-                                        className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none w-full"
-                                    >
-                                        {remarks.map(r => <option key={r} value={r}>{r}</option>)}
-                                    </select>
-                                </div>
-                                {currentRemark === "Tanpa AWB" && (
-                                    <Input label="Ciri-ciri Fisik" value={currentKeterangan} onChange={setCurrentKeterangan} placeholder="Warna, ukuran..." />
-                                )}
-                                <Button type="submit" className="w-full">Tambahkan ke List</Button>
-                            </form>
-                        </Card>
-
-                        <Card className="p-6 bg-blue-600 text-white border-none">
-                            <h4 className="font-bold opacity-80 uppercase text-xs tracking-widest mb-2">Total Batch</h4>
-                            <div className="flex items-end justify-between">
-                                <p className="text-4xl font-bold">{scannedList.length}</p>
-                                <p className="text-sm">Paket Siap</p>
-                            </div>
-                            <Button disabled={scannedList.length === 0 || isSubmitting} onClick={submitHandover} variant="success" className="w-full mt-6 bg-white text-blue-600 hover:bg-slate-100">
-                                {isSubmitting ? "Memproses..." : "Submit Semua"}
-                            </Button>
-                        </Card>
-                    </div>
-
-                    <div className="lg:col-span-8">
-                        <Card className="min-h-[400px]">
-                            {/* UPDATE: Header Informasi Daftar Tunggu */}
-                            <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-                                <div className="flex flex-wrap justify-between items-center gap-4">
-                                    <div className="font-bold text-slate-700 text-lg">Daftar Tunggu Handover</div>
-                                    <div className="flex gap-4 text-xs md:text-sm">
-                                        <div className="bg-white px-3 py-1 rounded border shadow-sm">
-                                            <span className="text-slate-500 block text-[10px] uppercase font-bold">Tanggal</span>
-                                            <span className="font-mono font-medium">{currentDateStr}</span>
-                                        </div>
-                                        <div className="bg-white px-3 py-1 rounded border shadow-sm">
-                                            <span className="text-slate-500 block text-[10px] uppercase font-bold">HUB (Pengirim)</span>
-                                            <span className="font-medium text-blue-600">{currentUser.name}</span>
-                                        </div>
-                                        <div className="bg-blue-50 px-3 py-1 rounded border border-blue-100 shadow-sm">
-                                            <span className="text-blue-500 block text-[10px] uppercase font-bold">No. Handover</span>
-                                            <span className="font-mono font-bold text-blue-700">{generatedHandoverId}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm">
-                                    <thead className="bg-slate-50 text-slate-500 text-xs">
-                                        <tr>
-                                            <th className="px-6 py-3">AWB</th>
-                                            <th className="px-6 py-3">Remarks</th>
-                                            <th className="px-6 py-3">Keterangan</th>
-                                            <th className="px-6 py-3 text-right">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {scannedList.map((item) => (
-                                            <tr key={item.temp_id} className="hover:bg-slate-50">
-                                                <td className="px-6 py-3 font-mono font-medium">{item.awb || "-"}</td>
-                                                <td className="px-6 py-3"><span className="text-xs bg-slate-100 px-2 py-0.5 rounded">{item.remarks_hub}</span></td>
-                                                <td className="px-6 py-3 text-slate-500">{item.keterangan_fisik || "-"}</td>
-                                                <td className="px-6 py-3 text-right">
-                                                    <div className="flex justify-end gap-2">
-                                                        <button onClick={() => triggerEdit(item)} className="text-blue-400 hover:text-blue-600 p-1 hover:bg-blue-50 rounded" title="Edit">
-                                                            <Icon name="pencil" size={16} />
-                                                        </button>
-                                                        <button onClick={() => triggerDelete(item.temp_id)} className="text-red-400 hover:text-red-600 p-1 hover:bg-red-50 rounded" title="Hapus">
-                                                            <Icon name="trash-2" size={16} />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                                {scannedList.length === 0 && (
-                                    <div className="p-10 text-center text-slate-400 flex flex-col items-center">
-                                        <Icon name="package-search" size={48} className="opacity-20 mb-2" />
-                                        <p>Belum ada paket yang di-scan.</p>
-                                    </div>
-                                )}
-                            </div>
-                        </Card>
-                    </div>
-                </div>
-            );
+            // Check existing draft for today or user
+            // Simplified: Reset draft state on entry for now, or could fetch "Status: Draft" from DB
+            resetDraftUI();
         }
 
-        // --- COMPONENT: HD INPUT ---
-        function HdInputView({ packages, showToast, currentUser }) {
-            const [bulkInput, setBulkInput] = useState("");
-            const [remarkHd, setRemarkHd] = useState("Sesuai");
-            const [catatan, setCatatan] = useState("");
-            const [isProcessing, setIsProcessing] = useState(false);
-
-            const processHdHandover = async () => {
-                if (!bulkInput.trim()) return;
-                setIsProcessing(true);
-                
-                const awbArray = bulkInput.split('\n').map(a => a.trim()).filter(a => a !== "");
-                let matchedCount = 0, anomaliCount = 0;
-
-                try {
-                    const batch = writeBatch(db);
-                    const handoverId = `HO-HD-${Date.now()}`;
-
-                    const handoverRef = doc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'handovers'), handoverId);
-                    
-                    // UPDATE: Simpan data item HD sebagai object juga untuk konsistensi surat jalan
-                    const detailedItems = awbArray.map(awb => ({
-                        awb: awb,
-                        remarks: remarkHd,
-                        description: catatan || "-"
-                    }));
-
-                    batch.set(handoverRef, {
-                        type: 'HD-HUB',
-                        sender: currentUser.name,
-                        total_items: awbArray.length,
-                        timestamp: serverTimestamp(),
-                        items: detailedItems
-                    });
-
-                    for (const awb of awbArray) {
-                        const existingPkg = packages.find(p => p.awb === awb && p.status_paket === 'Di HD');
-                        if (existingPkg) {
-                            const pkgRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'packages', existingPkg.id);
-                            batch.update(pkgRef, {
-                                status_paket: "Kembali ke HUB",
-                                tanggal_kembali: serverTimestamp(),
-                                remarks_hd: remarkHd,
-                                catatan_hd: catatan,
-                                hd_validator: currentUser.name
-                            });
-                            matchedCount++;
-                        } else {
-                            const newAnomaliRef = doc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'packages'));
-                            batch.set(newAnomaliRef, {
-                                awb: awb,
-                                status_paket: "Anomali HD",
-                                tanggal_kembali: serverTimestamp(),
-                                remarks_hd: "Tidak Terdata di HUB",
-                                catatan_hd: catatan,
-                                hd_validator: currentUser.name,
-                                created_at: serverTimestamp(),
-                                pengirim_hub: "System (Anomali)"
-                            });
-                            anomaliCount++;
-                        }
-                    }
-
-                    await batch.commit();
-                    showToast(`Selesai: ${matchedCount} Match, ${anomaliCount} Anomali.`);
-                    setBulkInput("");
-                    setCatatan("");
-                } catch (err) {
-                    console.error(err);
-                    showToast("Gagal memproses data HD", "error");
-                } finally {
-                    setIsProcessing(false);
-                }
-            };
-
-            return (
-                <div className="max-w-4xl mx-auto space-y-6">
-                    <Card className="p-6">
-                        <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
-                            <Icon name="truck" size={18} className="text-amber-500" />
-                            Proses Pengembalian HD ke HUB
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="flex flex-col gap-1">
-                                <label className="text-sm font-semibold text-slate-600">List AWB (Scan/Copy)</label>
-                                <textarea 
-                                    rows={10}
-                                    value={bulkInput}
-                                    onChange={(e) => setBulkInput(e.target.value)}
-                                    placeholder="Paste banyak AWB di sini..."
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none font-mono text-sm"
-                                />
-                            </div>
-                            <div className="space-y-6">
-                                <Input label="Remarks Global HD" value={remarkHd} onChange={setRemarkHd} placeholder="Misal: Paket Lengkap" />
-                                <div className="flex flex-col gap-1">
-                                    <label className="text-sm font-semibold text-slate-600">Catatan Tambahan</label>
-                                    <textarea 
-                                        rows={4}
-                                        value={catatan}
-                                        onChange={(e) => setCatatan(e.target.value)}
-                                        placeholder="Catatan opsional..."
-                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none text-sm"
-                                    />
-                                </div>
-                                <Button 
-                                    onClick={processHdHandover} 
-                                    className="w-full bg-amber-600 hover:bg-amber-700 h-14"
-                                    disabled={isProcessing || !bulkInput.trim()}
-                                >
-                                    {isProcessing ? "Memproses..." : "Proses Balik ke HUB"}
-                                </Button>
-                            </div>
-                        </div>
-                    </Card>
-                </div>
-            );
-        }
-
-        // --- COMPONENT: SURAT JALAN ---
-        function SuratJalanList({ handovers }) {
-            const [selectedHo, setSelectedHo] = useState(null);
-
-            return (
-                <div className="space-y-6">
-                    <Card>
-                        <div className="p-4 border-b border-slate-100 font-bold text-slate-700">Riwayat Serah Terima</div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
-                                    <tr>
-                                        <th className="px-6 py-4">No. Surat</th>
-                                        <th className="px-6 py-4">Tipe</th>
-                                        <th className="px-6 py-4">Pengirim</th>
-                                        <th className="px-6 py-4">Total</th>
-                                        <th className="px-6 py-4">Waktu</th>
-                                        <th className="px-6 py-4 text-right">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {handovers.map(ho => (
-                                        <tr key={ho.id} className="hover:bg-slate-50">
-                                            <td className="px-6 py-4 font-mono font-bold text-blue-600">{ho.id}</td>
-                                            <td className="px-6 py-4 font-semibold">{ho.type}</td>
-                                            <td className="px-6 py-4 text-slate-600">{ho.sender}</td>
-                                            <td className="px-6 py-4 font-bold">{ho.total_items}</td>
-                                            <td className="px-6 py-4 text-slate-500">{ho.timestamp?.toDate?.().toLocaleString('id-ID')}</td>
-                                            <td className="px-6 py-4 text-right">
-                                                <Button onClick={() => setSelectedHo(ho)} variant="outline" className="text-xs inline-flex py-1 px-3">
-                                                    <Icon name="printer" size={14} /> Cetak
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            {handovers.length === 0 && <div className="p-10 text-center text-slate-400">Belum ada riwayat.</div>}
-                        </div>
-                    </Card>
-
-                    {/* Menggunakan Reusable Component untuk Modal */}
-                    <SuratJalanPrintModal 
-                        data={selectedHo} 
-                        onClose={() => setSelectedHo(null)} 
-                    />
-                </div>
-            );
-        }
-
-        // --- COMPONENT: SETTINGS ---
-        function SettingsView({ remarks, setRemarks, showToast }) {
-            const [newRemark, setNewRemark] = useState("");
-            const [users, setUsers] = useState([]);
+        async function generateHandoverCode() {
+            // Format: DDMMYYYY-Sequence (e.g., 15022026-00001)
+            const today = new Date();
+            const dateCode = `${String(today.getDate()).padStart(2,'0')}${String(today.getMonth()+1).padStart(2,'0')}${today.getFullYear()}`;
             
-            // User Form States
-            const [uName, setUName] = useState("");
-            const [uUser, setUUser] = useState("");
-            const [uPass, setUPass] = useState("");
-            const [uRole, setURole] = useState("hub");
-            const [isEditingUser, setIsEditingUser] = useState(null);
-
-            useEffect(() => {
-                const qUsers = query(collection(db, 'artifacts', APP_ID, 'public', 'data', 'users'));
-                const unsub = onSnapshot(qUsers, (snap) => {
-                    setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-                });
-                return () => unsub();
-            }, []);
-
-            // Remarks Logic
-            const handleAddRemark = async () => {
-                if (!newRemark.trim()) return;
-                const updated = [...remarks, newRemark];
-                await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'settings', 'config'), { hub_remarks: updated });
-                setNewRemark("");
-            };
-
-            const handleRemoveRemark = async (rem) => {
-                const updated = remarks.filter(r => r !== rem);
-                await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'settings', 'config'), { hub_remarks: updated });
-            };
-
-            // User Management Logic
-            const handleSaveUser = async (e) => {
-                e.preventDefault();
-                try {
-                    const userData = {
-                        name: uName,
-                        username: uUser,
-                        password: uPass,
-                        role: uRole
-                    };
-
-                    if (isEditingUser) {
-                        await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', isEditingUser), userData);
-                        showToast("User berhasil diperbarui");
-                    } else {
-                        // Check duplicate username
-                        if (users.some(u => u.username === uUser)) {
-                            showToast("Username sudah dipakai", "error");
-                            return;
-                        }
-                        await addDoc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'users'), {
-                            ...userData,
-                            created_at: serverTimestamp()
-                        });
-                        showToast("User berhasil ditambah");
-                    }
-                    resetUserForm();
-                } catch (err) {
-                    console.error(err);
-                    showToast("Gagal menyimpan user", "error");
-                }
-            };
-
-            const handleDeleteUser = async (id) => {
-                if (users.length <= 1) {
-                    showToast("Tidak bisa menghapus user terakhir", "error");
-                    return;
-                }
-                if (confirm("Yakin hapus user ini?")) {
-                    await deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', id));
-                    showToast("User dihapus");
-                }
-            };
-
-            const editUser = (user) => {
-                setIsEditingUser(user.id);
-                setUName(user.name);
-                setUUser(user.username);
-                setUPass(user.password);
-                setURole(user.role);
-            };
-
-            const resetUserForm = () => {
-                setIsEditingUser(null);
-                setUName("");
-                setUUser("");
-                setUPass("");
-                setURole("hub");
-            };
-
-            return (
-                <div className="space-y-8">
-                    {/* MANAJEMEN REMARKS */}
-                    <Card className="max-w-4xl p-6">
-                        <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
-                            <Icon name="settings" size={18} className="text-slate-500" />
-                            Master Data Remarks HUB
-                        </h3>
-                        <div className="flex gap-2 mb-6">
-                            <Input className="flex-1" value={newRemark} onChange={setNewRemark} placeholder="Tambah remark..." />
-                            <Button onClick={handleAddRemark} className="mt-auto">Tambah</Button>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            {remarks.map(r => (
-                                <div key={r} className="flex items-center gap-2 px-3 py-2 bg-slate-100 border rounded-lg text-sm">
-                                    <span>{r}</span>
-                                    <button onClick={() => handleRemoveRemark(r)} className="text-red-400 hover:text-red-600"><Icon name="x" size={14} /></button>
-                                </div>
-                            ))}
-                        </div>
-                    </Card>
-
-                    {/* MANAJEMEN USER */}
-                    <Card className="max-w-4xl p-6">
-                        <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
-                            <Icon name="users" size={18} className="text-slate-500" />
-                            Manajemen User & Login
-                        </h3>
-                        
-                        <form onSubmit={handleSaveUser} className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6 grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-                            <div className="md:col-span-1"><Input label="Nama Lengkap" value={uName} onChange={setUName} required /></div>
-                            <div className="md:col-span-1"><Input label="Username" value={uUser} onChange={setUUser} required /></div>
-                            <div className="md:col-span-1"><Input label="Password" value={uPass} onChange={setUPass} required /></div>
-                            <div className="md:col-span-1">
-                                <label className="text-sm font-semibold text-slate-600">Role</label>
-                                <select value={uRole} onChange={e => setURole(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
-                                    <option value="admin">Admin</option>
-                                    <option value="hub">Tim HUB</option>
-                                    <option value="hd">Tim HD</option>
-                                    <option value="visitor">Visitor</option>
-                                </select>
-                            </div>
-                            <div className="flex gap-2">
-                                <Button type="submit" variant={isEditingUser ? "success" : "primary"} className="flex-1">
-                                    {isEditingUser ? "Update" : "Simpan"}
-                                </Button>
-                                {isEditingUser && <Button onClick={resetUserForm} variant="secondary">Batal</Button>}
-                            </div>
-                        </form>
-
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-100 text-slate-600 text-xs uppercase">
-                                    <tr>
-                                        <th className="px-4 py-2">Nama</th>
-                                        <th className="px-4 py-2">Username</th>
-                                        <th className="px-4 py-2">Role</th>
-                                        <th className="px-4 py-2">Password</th>
-                                        <th className="px-4 py-2 text-right">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {users.map(u => (
-                                        <tr key={u.id}>
-                                            <td className="px-4 py-3 font-medium">{u.name}</td>
-                                            <td className="px-4 py-3">{u.username}</td>
-                                            <td className="px-4 py-3 capitalize"><span className="bg-slate-200 px-2 py-0.5 rounded text-xs">{u.role}</span></td>
-                                            <td className="px-4 py-3 font-mono text-xs text-slate-400">********</td>
-                                            <td className="px-4 py-3 text-right flex justify-end gap-2">
-                                                <button onClick={() => editUser(u)} className="text-blue-500 hover:text-blue-700"><Icon name="edit-2" size={16} /></button>
-                                                <button onClick={() => handleDeleteUser(u.id)} className="text-red-400 hover:text-red-600"><Icon name="trash-2" size={16} /></button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </Card>
-                </div>
-            );
+            const startOfDay = new Date(today.setHours(0,0,0,0));
+            const q = query(collection(db, 'handover_items'), where('timestamp', '>=', startOfDay));
+            const snap = await getDocs(q);
+            const count = snap.size + 1; // +1 for current
+            
+            return `${dateCode}-${String(count).padStart(5, '0')}`;
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        // --- REVISI: UPDATE DRAFT HEADER (Auto Load Draft) ---
+        window.updateDraftHeader = async () => {
+            const hub = document.getElementById('hubOriginSelect').value;
+            const codeInput = document.getElementById('handoverCodeDisplay');
+            
+            if (!hub) {
+                codeInput.value = '';
+                currentDraftItems = [];
+                renderDraftTable();
+                return;
+            }
+
+            // Tampilkan loading indicator di input code sementara
+            codeInput.value = 'Mengecek Draft...';
+
+            try {
+                // 1. Cek Database: Cari draft yang statusnya masih 'draft' untuk HUB ini
+                const q = query(collection(db, 'handover_drafts'), 
+                    where('hubOrigin', '==', hub), 
+                    where('status', '==', 'draft'),
+                    limit(1)
+                );
+
+                const querySnapshot = await getDocs(q);
+
+                if (!querySnapshot.empty) {
+                    // KASUS A: DRAFT DITEMUKAN (Load Data)
+                    const docSnap = querySnapshot.docs[0];
+                    const data = docSnap.data();
+                    
+                    currentDraftId = docSnap.id;       // Simpan ID Dokumen agar saat save menimpa yang ini
+                    currentDraftItems = data.items || []; // Load item paket ke tabel
+                    codeInput.value = data.code;       // Pakai kode yang sudah ada di draft
+                    
+                    renderDraftTable();
+                    showToast(`Ditemukan ${currentDraftItems.length} item pending dari database.`, 'success');
+                } else {
+                    // KASUS B: TIDAK ADA DRAFT (Buat Baru)
+                    currentDraftId = null;             // Reset ID
+                    currentDraftItems = [];            // Kosongkan tabel
+                    renderDraftTable();
+                    
+                    // Generate kode baru
+                    const code = await generateHandoverCode();
+                    codeInput.value = code;
+                }
+            } catch (error) {
+                console.error("Error checking draft:", error);
+                showToast("Gagal mengecek draft: " + error.message, 'error');
+                codeInput.value = 'Error';
+            }
+        };
+
+        window.toggleSpecialInput = () => {
+            const rem = document.getElementById('inputRemarks').value;
+            const specialDiv = document.getElementById('specialInputSection');
+            if (rem === 'Tanpa AWB') {
+                specialDiv.classList.remove('hidden');
+            } else {
+                specialDiv.classList.add('hidden');
+            }
+        };
+
+        window.addItemToDraft = () => {
+            const awb = document.getElementById('inputAWB').value.trim();
+            const remarks = document.getElementById('inputRemarks').value;
+            const desc = document.getElementById('inputDesc').value;
+
+            if (!remarks) return showToast('Pilih Remarks dulu', 'error');
+            
+            // Logic Tanpa AWB
+            let finalAWB = awb;
+            let finalDesc = desc;
+            
+            if (remarks === 'Tanpa AWB') {
+                if (!desc) return showToast('Ciri-ciri paket wajib diisi', 'error');
+                finalAWB = 'NO-AWB-' + Date.now().toString().slice(-6); // Mock AWB
+            } else {
+                if (!awb) return showToast('AWB Wajib diisi', 'error');
+            }
+
+            pushItem({
+                awb: finalAWB, remarks, desc: finalDesc, 
+                pic: currentUser.nama, photo: null, 
+                timestamp: new Date()
+            });
+        };
+
+        function pushItem(item) {
+            // Check Duplicate AWB in draft
+            if (currentDraftItems.some(i => i.awb === item.awb && i.remarks !== 'Tanpa AWB')) {
+                return showToast('AWB sudah ada di daftar', 'error');
+            }
+
+            currentDraftItems.push(item);
+            renderDraftTable();
+            
+            // Reset Inputs
+            document.getElementById('inputAWB').value = '';
+            document.getElementById('inputDesc').value = '';
+            document.getElementById('inputAWB').focus();
+        }
+
+        function renderDraftTable() {
+            const tbody = document.getElementById('draftTableBody');
+            tbody.innerHTML = '';
+            if (currentDraftItems.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center p-3">Belum ada data.</td></tr>';
+                return;
+            }
+            currentDraftItems.forEach((item, idx) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${idx + 1}</td>
+                        <td>${item.awb}</td>
+                        <td>${item.remarks}</td>
+                        <td>${item.desc || '-'}</td>
+                        <td>${item.pic}</td>
+                        <td style="text-align:right;">
+                            <button class="btn-sm btn-danger" onclick="removeItem(${idx})"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        window.removeItem = (idx) => {
+            window.showConfirm("Hapus item ini dari draft?", () => {
+                currentDraftItems.splice(idx, 1);
+                renderDraftTable();
+            });
+        };
+
+        window.saveDraftToDB = async () => {
+            if (currentDraftItems.length === 0) return showToast('Daftar kosong', 'error');
+            const hub = document.getElementById('hubOriginSelect').value;
+            const code = document.getElementById('handoverCodeDisplay').value;
+
+            if (!hub) return showToast('Pilih HUB Asal', 'error');
+
+            // Set tombol jadi loading
+            const btn = event.target.closest('button'); // Ambil tombol yang diklik
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+            btn.disabled = true;
+
+            const draftData = {
+                code, hubOrigin: hub,
+                status: 'draft',
+                lastUpdated: new Date(),
+                items: currentDraftItems
+            };
+
+            try {
+                if (currentDraftId) {
+                    // Update draft yang sudah ada
+                    await updateDoc(doc(db, 'handover_drafts', currentDraftId), draftData);
+                } else {
+                    // Buat draft baru
+                    const docRef = await addDoc(collection(db, 'handover_drafts'), draftData);
+                    currentDraftId = docRef.id;
+                }
+                showToast('Draft berhasil disimpan ke Database. Aman jika direload.', 'success');
+            } catch (e) {
+                showToast('Gagal simpan: ' + e.message, 'error');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        };
+
+        window.submitHandover = async () => {
+            if (currentDraftItems.length === 0) return showToast('Daftar kosong', 'error');
+            const hub = document.getElementById('hubOriginSelect').value;
+            const code = document.getElementById('handoverCodeDisplay').value;
+            if (!hub) return showToast('Pilih HUB Asal', 'error');
+
+            window.showConfirm("Submit data? Data tidak bisa diubah setelah ini.", async () => {
+                try {
+                    // 1. Save Header Info to History Collection (for Recap)
+                    await addDoc(collection(db, 'handover_history'), {
+                        code, hubOrigin: hub, date: new Date(), 
+                        totalItems: currentDraftItems.length,
+                        status: 'submitted'
+                    });
+
+                    // 2. Save Individual Items (for searching)
+                    const batchPromises = currentDraftItems.map(item => {
+                        return addDoc(collection(db, 'handover_items'), {
+                            ...item,
+                            handoverCode: code,
+                            hubOrigin: hub,
+                            timestamp: new Date()
+                        });
+                    });
+                    await Promise.all(batchPromises);
+
+                    // 3. Delete Draft if exists
+                    if (currentDraftId) {
+                        await deleteDoc(doc(db, 'handover_drafts', currentDraftId));
+                    }
+
+                    showToast('Sukses! Membuka cetakan...', 'success');
+                    
+                    // PREPARE PRINT
+                    document.getElementById('printHubName').innerText = `HUB: ${hub}`;
+                    document.getElementById('printDateCode').innerText = `Tanggal: ${document.getElementById('currentDateDisplay').value} | Kode: ${code}`;
+                    const printBody = document.getElementById('printTableBody');
+                    printBody.innerHTML = '';
+                    currentDraftItems.forEach((item, i) => {
+                        printBody.innerHTML += `<tr><td>${i+1}</td><td>${item.awb}</td><td>${item.remarks}</td><td>${item.desc || '-'}</td><td>${item.pic}</td></tr>`;
+                    });
+
+                    setTimeout(() => {
+                        window.print();
+                        resetDraftUI(); // Reset after print
+                    }, 1000);
+
+                } catch (e) {
+                    showToast('Error: ' + e.message, 'error');
+                }
+            });
+        };
+
+        function resetDraftUI() {
+            currentDraftItems = [];
+            currentDraftId = null;
+            renderDraftTable();
+            document.getElementById('inputAWB').value = '';
+            document.getElementById('hubOriginSelect').value = '';
+            document.getElementById('handoverCodeDisplay').value = '';
+        }
+
+        // --- REKAPAN DATA ---
+        window.loadHistoryData = async () => {
+            const summaryBody = document.getElementById('historySummaryBody');
+            const detailBody = document.getElementById('historyDetailBody');
+            
+            summaryBody.innerHTML = '<tr><td colspan="3" class="text-center">Loading...</td></tr>';
+            detailBody.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
+            
+            try {
+                // 1. Load Tabel Summary (Handover Headers)
+                const qSummary = query(collection(db, 'handover_history'), orderBy('date', 'desc'), limit(20));
+                const snapSummary = await getDocs(qSummary);
+                
+                summaryBody.innerHTML = '';
+                if (snapSummary.empty) {
+                    summaryBody.innerHTML = '<tr><td colspan="3" class="text-center">Kosong.</td></tr>';
+                } else {
+                    snapSummary.forEach(doc => {
+                        const d = doc.data();
+                        const date = d.date ? d.date.toDate().toLocaleDateString('id-ID', {day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit'}) : '-';
+                        summaryBody.innerHTML += `
+                            <tr>
+                                <td>${date}</td>
+                                <td style="font-weight:600; color:var(--primary-color);">${d.code}</td>
+                                <td>${d.totalItems}</td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                // 2. Load Tabel Detail (Individual Items)
+                const qDetail = query(collection(db, 'handover_items'), orderBy('timestamp', 'desc'), limit(50));
+                const snapDetail = await getDocs(qDetail);
+
+                detailBody.innerHTML = '';
+                if (snapDetail.empty) {
+                    detailBody.innerHTML = '<tr><td colspan="10" class="text-center">Belum ada rincian item.</td></tr>';
+                } else {
+                    snapDetail.forEach(doc => {
+                        const i = doc.data();
+                        const time = i.timestamp ? i.timestamp.toDate().toLocaleDateString('id-ID', {day: '2-digit', month: 'short', hour: '2-digit', minute:'2-digit'}) : '-';
+                        
+                        let remarkColor = '#666';
+                        if(i.remarks === 'Tanpa AWB') remarkColor = 'red';
+                        else if(i.remarks === 'Rusak') remarkColor = 'orange';
+
+                        // Logika Status Sederhana (Placeholder karena belum ada fitur proses HD)
+                        // Nanti bisa diganti: const status = i.status_hd || 'Handover HD';
+                        const status = 'Handover HD'; 
+                        const badgeClass = 'badge-warning'; // Kuning untuk pending HD
+                        
+                        // Data placeholder untuk kolom HD (karena belum ada inputan dari HD)
+                        const tglKembali = i.tgl_kembali ? i.tgl_kembali.toDate().toLocaleDateString('id-ID') : '-';
+                        const remarksHD = i.remarks_hd || '-';
+                        const picHD = i.pic_hd || '-';
+
+                        detailBody.innerHTML += `
+                            <tr>
+                                <td style="color: #888;">${time}</td>
+                                <td>${i.handoverCode}</td>
+                                <td style="font-weight: 500;">${i.awb}</td>
+                                <td style="color:${remarkColor}; font-weight:500;">${i.remarks}</td>
+                                <td>${i.desc || '-'}</td>
+                                <td>${i.pic}</td>
+                                <td><span class="badge ${badgeClass}" style="background:#fff3cd; color:#b45309;">${status}</span></td>
+                                <td>${tglKembali}</td>
+                                <td>${remarksHD}</td>
+                                <td>${picHD}</td>
+                            </tr>
+                        `;
+                    });
+                }
+
+            } catch (error) {
+                console.error(error);
+                summaryBody.innerHTML = `<tr><td colspan="3" style="color:red">Error: ${error.message}</td></tr>`;
+                detailBody.innerHTML = `<tr><td colspan="10" style="color:red">Error: ${error.message}</td></tr>`;
+            }
+        };
+
+        // --- SETTINGS (OPTIONS) ---
+        async function loadSettingsOptions() {
+            const snap = await getDoc(doc(db, 'settings', 'options'));
+            if (snap.exists()) {
+                const d = snap.data();
+                const hubSel = document.getElementById('hubOriginSelect');
+                const remSel = document.getElementById('inputRemarks');
+                const hubList = document.getElementById('hubList');
+                const remList = document.getElementById('remarksList');
+
+                // Clear
+                hubSel.innerHTML = '<option value="">-- Pilih HUB --</option>';
+                remSel.innerHTML = '<option value="">-- Pilih Remarks --</option>';
+                hubList.innerHTML = ''; remList.innerHTML = '';
+
+                (d.hubs || []).forEach(h => {
+                    hubSel.innerHTML += `<option value="${h}">${h}</option>`;
+                    hubList.innerHTML += `<li style="padding:5px; border-bottom:1px solid #eee; display:flex; justify-content:space-between;">${h} <i class="fa-solid fa-trash text-danger" onclick="deleteOption('hubs', '${h}')" style="cursor:pointer;"></i></li>`;
+                });
+
+                (d.remarks || []).forEach(r => {
+                    remSel.innerHTML += `<option value="${r}">${r}</option>`;
+                    remList.innerHTML += `<li style="padding:5px; border-bottom:1px solid #eee; display:flex; justify-content:space-between;">${r} <i class="fa-solid fa-trash text-danger" onclick="deleteOption('remarks', '${r}')" style="cursor:pointer;"></i></li>`;
+                });
+            }
+        }
+
+        window.addOption = (type) => {
+            const label = type === 'hubs' ? 'Nama HUB' : 'Remarks';
+            window.showPrompt(`Tambah ${label} Baru`, async (val) => {
+                if (!val) return showToast('Input tidak boleh kosong', 'error');
+                
+                const ref = doc(db, 'settings', 'options');
+                const snap = await getDoc(ref);
+                let current = snap.exists() ? snap.data()[type] || [] : [];
+                
+                // Cek duplikat
+                if(current.includes(val)) return showToast('Data sudah ada', 'error');
+                
+                current.push(val);
+                await updateDoc(ref, { [type]: current });
+                loadSettingsOptions();
+                showToast('Berhasil ditambahkan');
+            });
+        };
+
+        window.deleteOption = (type, val) => {
+            window.showConfirm(`Hapus opsi "${val}"?`, async () => {
+                const ref = doc(db, 'settings', 'options');
+                const snap = await getDoc(ref);
+                let current = snap.data()[type] || [];
+                const newData = current.filter(x => x !== val);
+                await updateDoc(ref, { [type]: newData });
+                loadSettingsOptions();
+                showToast('Opsi dihapus');
+            });
+        };
+
+        // --- USER MANAGEMENT (CRUD) ---
+        function startUserListener() {
+            const q = query(collection(db, "users"));
+            unsubscribeUsers = onSnapshot(q, (snap) => {
+                const tbody = document.getElementById('userTableBody');
+                tbody.innerHTML = '';
+                snap.forEach((doc) => {
+                    const u = doc.data();
+                    const safeUser = JSON.stringify({docId: doc.id, ...u}).replace(/"/g, '&quot;');
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${u.idUser}</td>
+                            <td>${u.nama}</td>
+                            <td><span class="badge badge-visitor">${u.role}</span></td>
+                            <td>***</td>
+                            <td>
+                                <button class="btn-sm btn-secondary" onclick='window.prepareEdit(${safeUser})'><i class="fa-solid fa-pen"></i></button>
+                                <button class="btn-sm btn-danger" onclick="window.deleteUser('${doc.id}', '${u.nama}')"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>`;
+                });
+            });
+        }
+        
+        window.openUserModal = () => {
+            document.getElementById('userModal').classList.add('active');
+            document.getElementById('userForm').reset();
+            document.getElementById('editDocId').value = "";
+        };
+
+        window.prepareEdit = (user) => {
+            document.getElementById('userModal').classList.add('active');
+            document.getElementById('editDocId').value = user.docId;
+            document.getElementById('m_iduser').value = user.idUser;
+            document.getElementById('m_nama').value = user.nama;
+            document.getElementById('m_password').value = user.password;
+            document.getElementById('m_role').value = user.role;
+        };
+
+        window.saveUser = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btnSaveUser'); btn.disabled = true;
+            const docId = document.getElementById('editDocId').value;
+            const data = {
+                idUser: document.getElementById('m_iduser').value,
+                nama: document.getElementById('m_nama').value,
+                password: document.getElementById('m_password').value,
+                role: document.getElementById('m_role').value
+            };
+
+            try {
+                if (!docId) {
+                    const q = query(collection(db, "users"), where("idUser", "==", data.idUser));
+                    if (!(await getDocs(q)).empty) throw new Error('ID User sudah ada');
+                    await addDoc(collection(db, "users"), data);
+                } else {
+                    await updateDoc(doc(db, "users", docId), data);
+                }
+                showToast('Berhasil'); window.closeModal('userModal');
+            } catch (err) { showToast(err.message, 'error'); } 
+            finally { btn.disabled = false; }
+        };
+
+        window.deleteUser = (id, nama) => {
+            window.showConfirm(`Hapus ${nama}?`, async () => {
+                await deleteDoc(doc(db, "users", id));
+                showToast('Terhapus');
+            });
+        };
+
+        // UTILS
+        window.closeModal = (id) => document.getElementById(id).classList.remove('active');
+        window.showToast = (msg, type='success') => {
+            const t = document.createElement('div');
+            t.className = `toast ${type}`;
+            t.innerHTML = `<i class="fa-solid fa-${type==='success'?'check':'circle-exclamation'}"></i> <div><h5>Info</h5><p>${msg}</p></div>`;
+            document.getElementById('toastContainer').appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        };
+        window.showConfirm = (msg, onYes) => {
+            const m = document.getElementById('confirmModal');
+            document.getElementById('confirmMessage').innerText = msg;
+            m.classList.add('active');
+            const btn = document.getElementById('confirmYesBtn');
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            newBtn.addEventListener('click', () => { onYes(); window.closeModal('confirmModal'); });
+        };
+        
+        // Prompt Modal Logic
+        window.showPrompt = (title, onSubmit) => {
+            const m = document.getElementById('promptModal');
+            document.getElementById('promptTitle').innerText = title;
+            const input = document.getElementById('promptInput');
+            input.value = '';
+            m.classList.add('active');
+            input.focus();
+            
+            const btn = document.getElementById('promptSubmitBtn');
+            const newBtn = btn.cloneNode(true); // Remove old listeners
+            btn.parentNode.replaceChild(newBtn, btn);
+            
+            newBtn.addEventListener('click', () => {
+                onSubmit(input.value.trim());
+                window.closeModal('promptModal');
+            });
+
+            // Enter key support helper
+            window.currentPromptSubmit = () => newBtn.click();
+        };
+
+        window.handlePromptKey = (e) => {
+            if(e.key === 'Enter') window.currentPromptSubmit();
+        };
+
+        window.updateAdminPassword = async () => {
+            const p = document.getElementById('newAdminPass').value;
+            if(p) { await updateDoc(doc(db,'settings','admin_auth'), {password:p}); showToast('Pass Admin Updated'); }
+        };
     </script>
 </body>
 </html>
